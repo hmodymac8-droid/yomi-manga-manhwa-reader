@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { MalInfo, MalTopKind, SearchHit } from '../../../preload/index.d'
 import type { OpenSeries } from '../lib'
 import { HitCard } from './Similar'
+import { useRowFit } from '../useRowFit'
 
 const compact = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 })
 
@@ -93,6 +94,7 @@ export function MalTopRow({
   const list = rows[kind]
   // one row that fits the window; "Show all" opens the whole list as a grid
   const [all, setAll] = useState(false)
+  const [rowRef, cols] = useRowFit()
   // nothing on your sites from any list asked so far (or MyAnimeList is off): no row at all
   if (!list || (list.length === 0 && Object.values(rows).every((r) => !r || r.length === 0)))
     return null
@@ -116,14 +118,14 @@ export function MalTopRow({
             </button>
           ))}
         </span>
-        {list.length > 0 && (
+        {list.length > 0 && (all || list.length > cols) && (
           <button className="mini fitmore" onClick={() => setAll(!all)}>
             {all ? 'Show fewer' : `Show all ${list.length}`}
           </button>
         )}
       </div>
       {list.length > 0 ? (
-        <div className={all ? 'fitgrid' : 'fitrow'}>
+        <div ref={rowRef} className={all ? 'fitgrid' : 'fitrow'}>
           {list.map((r) => (
             <HitCard
               key={r.hit.key}

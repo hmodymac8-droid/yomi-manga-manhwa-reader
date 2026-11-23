@@ -416,6 +416,7 @@ function AppInner({ mini }: { mini: boolean }): React.JSX.Element {
                 <button
                   key={item.id}
                   className={`navitem${view.name === item.id ? ' on' : ''}`}
+                  title={item.label}
                   onClick={() => setView({ name: item.id } as View)}
                 >
                   <Icon name={item.icon} />
