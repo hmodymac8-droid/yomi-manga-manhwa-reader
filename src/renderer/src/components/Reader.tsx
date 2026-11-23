@@ -581,6 +581,7 @@ export default function Reader({
                 if (!cancelled && c === nextCh && first.length > 0)
                   setPreview({ url: c.url, title: c.title, pages: first, referer: ref })
               })
+              .catch(() => undefined) // no preview this time; the pull at the end still opens the chapter
           }
         }, 600)
         if (startPos > 0.02) {

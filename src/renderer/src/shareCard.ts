@@ -150,7 +150,7 @@ export async function makeShareCard(
   ctx.fillText('Read it on Yomi', W / 2, H - 92)
   ctx.fillStyle = 'rgba(255,255,255,0.6)'
   ctx.font = '500 30px "DM Sans Variable", system-ui, sans-serif'
-  ctx.fillText('hmodymac8-droid.github.io/yomi', W / 2, H - 46)
+  ctx.fillText('hmodymac8-droid.github.io/yomi-manga-manhwa-reader', W / 2, H - 46)
 
   return await new Promise<Blob>((resolve, reject) =>
     canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('no image'))), type, quality)
