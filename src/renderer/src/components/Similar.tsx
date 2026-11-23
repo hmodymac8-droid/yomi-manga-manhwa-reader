@@ -46,11 +46,18 @@ export function HitStrip({
   hits: SearchHit[]
   onOpen: (s: OpenSeries) => void
 }): React.JSX.Element | null {
+  // one row that fits the window; "Show all" opens the rest as a grid
+  const [all, setAll] = useState(false)
   if (hits.length === 0) return null
   return (
     <section className="continue similar">
-      <div className="meta">{label}</div>
-      <div className="strip">
+      <div className="meta fithead">
+        <span>{label}</span>
+        <button className="mini fitmore" onClick={() => setAll(!all)}>
+          {all ? 'Show fewer' : `Show all ${hits.length}`}
+        </button>
+      </div>
+      <div className={all ? 'fitgrid' : 'fitrow'}>
         {hits.map((h) => (
           <HitCard key={h.key} h={h} onOpen={onOpen} />
         ))}
