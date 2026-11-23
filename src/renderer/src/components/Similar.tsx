@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useRowFit } from '../useRowFit'
 import type { SearchHit } from '../../../preload/index.d'
 import { coverSrc, fallbackCover, type OpenSeries } from '../lib'
 
@@ -48,16 +49,19 @@ export function HitStrip({
 }): React.JSX.Element | null {
   // one row that fits the window; "Show all" opens the rest as a grid
   const [all, setAll] = useState(false)
+  const [rowRef, cols] = useRowFit()
   if (hits.length === 0) return null
   return (
     <section className="continue similar">
       <div className="meta fithead">
         <span>{label}</span>
-        <button className="mini fitmore" onClick={() => setAll(!all)}>
-          {all ? 'Show fewer' : `Show all ${hits.length}`}
-        </button>
+        {(all || hits.length > cols) && (
+          <button className="mini fitmore" onClick={() => setAll(!all)}>
+            {all ? 'Show fewer' : `Show all ${hits.length}`}
+          </button>
+        )}
       </div>
-      <div className={all ? 'fitgrid' : 'fitrow'}>
+      <div ref={rowRef} className={all ? 'fitgrid' : 'fitrow'}>
         {hits.map((h) => (
           <HitCard key={h.key} h={h} onOpen={onOpen} />
         ))}

@@ -13,6 +13,7 @@ import Featured from './Featured'
 import GenreProgress from './GenreProgress'
 import { Icon } from './Icon'
 import { BecauseYouRead } from './Similar'
+import { useRowFit } from '../useRowFit'
 import { MalTopRow } from './Mal'
 import { notYetAdded } from '../siteDirectory'
 
@@ -183,6 +184,11 @@ export default function Browse({
   // previous site or page can never end up in front of the new ones.
   const gen = useRef(0)
   const lastRefresh = useRef(0)
+  // While Discover is hidden (you are reading or on another screen) it doesn't search: every search walks all your
+  // titles in the main process, which also hands the reader its pictures, so searches behind the reader made
+  // scrolling stall. A search that was skipped runs once you come back.
+  const activeRef = useRef(active)
+  const missed = useRef(false)
   const searchDelay = useRef(150) // typing is debounced; clicking a page is immediate
 
   // Pages: the grid shows PAGE titles at a time.
@@ -377,7 +383,13 @@ export default function Browse({
 
   // Reload "Continue reading" and "New chapters" every time we come back to this screen.
   useEffect(() => {
+    activeRef.current = active
     if (!active) return
+    if (missed.current) {
+      missed.current = false
+      void refreshSources()
+      void runSearch()
+    }
     window.api.progressRecent(12).then(setRecent)
     window.api.followList().then(setFollows)
     window.api.updatesStatus().then(setUpd)
@@ -519,6 +531,10 @@ export default function Browse({
     return window.api.onProgress((p) => {
       setProgress((prev) => ({ ...prev, [p.sourceId]: p }))
       const now = Date.now()
+      if (!activeRef.current) {
+        missed.current = true
+        return
+      }
       if (p.done || now - lastRefresh.current > 2500) {
         lastRefresh.current = now
         refreshSources()
@@ -586,6 +602,9 @@ export default function Browse({
     runSearch()
   }
 
+  // Continue reading: one row that fits the window; "Show all" opens the rest (not remembered)
+  const [recentAll, setRecentAll] = useState(false)
+  const [recentRef, recentCols] = useRowFit()
   const ready = notYetAdded(sources) // Popular sites you haven't added yet
   // a few of each language at first, so the list stays small; "Show all" opens the rest (not remembered)
   const [dirAll, setDirAll] = useState(false)
@@ -875,8 +894,15 @@ export default function Browse({
               )}
               {recentL.length > 0 && !topQ.trim() && (
                 <section className="continue">
-                  <div className="meta">Continue reading</div>
-                  <div className="strip">
+                  <div className="meta fithead">
+                    <span>Continue reading</span>
+                    {(recentAll || recentL.length > recentCols) && (
+                      <button className="mini fitmore" onClick={() => setRecentAll(!recentAll)}>
+                        {recentAll ? 'Show fewer' : `Show all ${recentL.length}`}
+                      </button>
+                    )}
+                  </div>
+                  <div ref={recentRef} className={recentAll ? 'fitgrid' : 'fitrow'}>
                     {recentL.map((r) => (
                       <div key={r.seriesUrl} className="cwrap">
                         <button className="card small" onClick={() => openRecent(r)}>

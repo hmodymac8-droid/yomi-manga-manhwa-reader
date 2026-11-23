@@ -2,8 +2,7 @@ import { app, nativeImage, net, protocol, session } from 'electron'
 import { join, resolve, sep } from 'path'
 import { pathToFileURL } from 'url'
 import { createHash } from 'crypto'
-import { readdirSync, statSync, unlinkSync } from 'fs'
-import { mkdir, readFile, writeFile } from 'fs/promises'
+import { mkdir, readdir, readFile, stat, unlink, writeFile } from 'fs/promises'
 import { downloadsRoot } from './downloads'
 import { ensureSession, refererHints } from './grabber'
 import { unseal } from './sealed'
@@ -35,6 +34,11 @@ function cachePath(url: string, ext: string): string {
   return join(cacheDir(), key.slice(0, 2), `${key}.${ext}`)
 }
 
+/** The picture as it is, for a Response (a view of the same memory: copying every page was extra work for the
+ * main process, and extra garbage to clear while you scroll). */
+const bytes = (b: Buffer): Uint8Array<ArrayBuffer> =>
+  new Uint8Array(b.buffer, b.byteOffset, b.byteLength) as Uint8Array<ArrayBuffer>
+
 // The disk cache is read and written in the background (never while the app waits), so covers arriving while you
 // scroll don't make it stutter. extOf remembers which kind of file each cached image is, to find it in one go.
 const extOf = new Map<string, string>()
@@ -62,34 +66,52 @@ function cachePut(url: string, type: string, buf: Buffer): void {
     .then(() => writeFile(p, buf))
     .then(() => {
       extOf.set(url, ext)
-      if (++writes % 150 === 0) setTimeout(trimCache, 2000)
+      if (++writes % 150 === 0) setTimeout(() => void trimCache(), 2000)
     })
     .catch(() => undefined) // the cache is best-effort
 }
 
-/** Delete the oldest cached images once the cache grows past its cap. */
-function trimCache(): void {
+/**
+ * Delete the oldest cached images once the cache grows past its cap. It looks at every cached file, so it runs in the
+ * background a few files at a time: done in one go it held the main process (and every picture it hands out) for a
+ * moment every 150 pictures, which showed as a stall while reading.
+ */
+let trimming = false
+async function trimCache(): Promise<void> {
+  if (trimming) return
+  trimming = true
   try {
     const files: { p: string; size: number; t: number }[] = []
     let total = 0
-    for (const d of readdirSync(cacheDir())) {
+    for (const d of await readdir(cacheDir())) {
       const dir = join(cacheDir(), d)
-      for (const f of readdirSync(dir)) {
-        const p = join(dir, f)
-        const st = statSync(p)
-        files.push({ p, size: st.size, t: st.mtimeMs })
-        total += st.size
+      let names: string[]
+      try {
+        names = await readdir(dir)
+      } catch {
+        continue // not a folder
+      }
+      for (let i = 0; i < names.length; i += 32) {
+        const batch = names.slice(i, i + 32).map((f) => join(dir, f))
+        const sts = await Promise.all(batch.map((f) => stat(f).catch(() => null)))
+        sts.forEach((st, j) => {
+          if (!st?.isFile()) return
+          files.push({ p: batch[j], size: st.size, t: st.mtimeMs })
+          total += st.size
+        })
       }
     }
     if (total <= CACHE_CAP) return
-    files.sort((a, b) => a.t - b.t)
+    files.sort((x, y) => x.t - y.t)
     for (const f of files) {
       if (total <= CACHE_CAP * 0.8) break
-      unlinkSync(f.p)
+      await unlink(f.p).catch(() => undefined)
       total -= f.size
     }
   } catch {
-    /* ignore */
+    /* ignore: tried again later */
+  } finally {
+    trimming = false
   }
 }
 
@@ -181,14 +203,14 @@ export function installImageProxy(): void {
     const cover = url.searchParams.get('c') === '1'
     const key = cover ? target + '#cover' : target // the small cover copy is cached apart from the original
     const cached = await cacheGet(key)
-    if (cached) return new Response(new Uint8Array(cached.buf), { headers: { 'content-type': cached.type, 'cache-control': 'max-age=31536000' } })
+    if (cached) return new Response(bytes(cached.buf), { headers: { 'content-type': cached.type, 'cache-control': 'max-age=31536000' } })
     if (cover) {
       // the original is already saved from before: make the small copy from it instead of downloading again
       const orig = await cacheGet(target)
       if (orig) {
         const s = shrinkCover(orig.buf, orig.type)
         cachePut(key, s.type, s.buf)
-        return new Response(new Uint8Array(s.buf), { headers: { 'content-type': s.type, 'cache-control': 'max-age=31536000' } })
+        return new Response(bytes(s.buf), { headers: { 'content-type': s.type, 'cache-control': 'max-age=31536000' } })
       }
     }
 
@@ -207,7 +229,7 @@ export function installImageProxy(): void {
       let outType = type
       if (cover) ({ buf, type: outType } = shrinkCover(buf, type))
       cachePut(key, outType, buf)
-      return new Response(new Uint8Array(buf), { headers: { 'content-type': outType, 'cache-control': 'max-age=31536000' } })
+      return new Response(bytes(buf), { headers: { 'content-type': outType, 'cache-control': 'max-age=31536000' } })
     } catch {
       return new Response('fetch failed', { status: 502 })
     }

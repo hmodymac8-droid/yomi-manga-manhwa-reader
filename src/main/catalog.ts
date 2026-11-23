@@ -1822,6 +1822,19 @@ function* kindMemoWork(groups: Grp[]): Generator<
   return memo
 }
 
+/*
+ * What a type + genre filter keeps of a list, and its counts. Worked out once per list and filter: turning pages,
+ * or asking again for the same list, only slices it. (Each new count walks every title, up to ~200,000: done for every
+ * page it held the main process for a fifth of a second, and the pictures it hands out with it.)
+ */
+interface Filtered {
+  keep: Grp[]
+  counts: SearchResult['counts']
+  genres: NonNullable<SearchResult['genres']>
+  noGenre: number
+}
+const filteredMemo = new WeakMap<Grp[], Map<string, Filtered>>()
+
 function pick(
   groups: Grp[],
   kind: SeriesType | undefined,
@@ -1829,6 +1842,22 @@ function pick(
   offset: number,
   limit: number
 ): SearchResult {
+  const f = filtered(groups, kind, genre)
+  return {
+    total: f.keep.length,
+    hits: f.keep.slice(offset, offset + limit).map(toHit),
+    counts: f.counts,
+    genres: f.genres,
+    noGenre: f.noGenre
+  }
+}
+
+function filtered(groups: Grp[], kind: SeriesType | undefined, genre: string | undefined): Filtered {
+  let byFilter = filteredMemo.get(groups)
+  if (!byFilter) filteredMemo.set(groups, (byFilter = new Map()))
+  const fk = (kind ?? '') + '|' + (genre ?? '')
+  const hit = byFilter.get(fk)
+  if (hit) return hit
   const memo = runSync(kindMemoWork(groups))
   // '__none__' = the titles whose genres aren't known yet (open one and its genres load)
   const none = genre === '__none__'
@@ -1854,13 +1883,9 @@ function pick(
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .slice(0, 80)
     .map(([name, count]) => ({ name, count }))
-  return {
-    total: keep.length,
-    hits: keep.slice(offset, offset + limit).map(toHit),
-    counts,
-    genres,
-    noGenre
-  }
+  const out: Filtered = { keep, counts, genres, noGenre }
+  byFilter.set(fk, out)
+  return out
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -2683,7 +2708,7 @@ function loadSeriesCache(): Record<string, SeriesCacheEntry> {
     // Chapter lists saved before the fixes may be half-loaded (2 chapters instead of 90): start clean.
     for (const k of Object.keys(rec)) delete rec[k]
     rec['__v'] = SERIES_CACHE_VERSION
-    seriesTimer = setTimeout(flushSeriesCache, 1500)
+    seriesTimer = setTimeout(saveSeriesCacheBg, 1500)
   }
   // Lists saved before other series' sidebar chapters were dropped: clean them (a list left empty is forgotten).
   let cleaned = false
@@ -2706,7 +2731,7 @@ function loadSeriesCache(): Record<string, SeriesCacheEntry> {
   }
   if (cleaned) {
     if (seriesTimer) clearTimeout(seriesTimer)
-    seriesTimer = setTimeout(flushSeriesCache, 1500)
+    seriesTimer = setTimeout(saveSeriesCacheBg, 1500)
   }
   return seriesCache
 }
@@ -2730,9 +2755,17 @@ function rewriteSeriesCacheHost(oldHost: string, newOrigin: string): void {
     c[detail.url] = { ...row, detail }
   }
   if (seriesTimer) clearTimeout(seriesTimer)
-  seriesTimer = setTimeout(flushSeriesCache, 1500)
+  seriesTimer = setTimeout(saveSeriesCacheBg, 1500)
 }
 
+/** The timed save: written in the background, so a 3 MB list never holds up the pictures being read. */
+function saveSeriesCacheBg(): void {
+  seriesTimer = undefined
+  if (!seriesCache) return
+  void writeAtomicAsync(seriesCachePath(), JSON.stringify(seriesCache)).catch(() => undefined)
+}
+
+/** Saves right now (when the app closes). */
 export function flushSeriesCache(): void {
   if (seriesTimer) clearTimeout(seriesTimer)
   seriesTimer = undefined
@@ -2767,7 +2800,7 @@ export function mergeNewest(url: string, newest: SeriesDetail): SeriesDetail | n
   c.checkedAt = Date.now()
   rememberMeta(url, c.detail)
   if (seriesTimer) clearTimeout(seriesTimer)
-  seriesTimer = setTimeout(flushSeriesCache, 1500)
+  seriesTimer = setTimeout(saveSeriesCacheBg, 1500)
   return c.detail
 }
 
@@ -2813,7 +2846,7 @@ function cacheSeries(d: SeriesDetail): void {
     for (const k of keys.slice(0, keys.length - 300)) delete c[k]
   }
   if (seriesTimer) clearTimeout(seriesTimer)
-  seriesTimer = setTimeout(flushSeriesCache, 1500)
+  seriesTimer = setTimeout(saveSeriesCacheBg, 1500)
 }
 
 export function getSeriesCached(url: string): SeriesDetail | null {
