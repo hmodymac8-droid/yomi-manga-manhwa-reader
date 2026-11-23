@@ -16,6 +16,7 @@ import { numberOf as numberOfTitle } from './gapfillLogic'
 import { gzipSync } from 'zlib'
 import { flushStats, readingStats, statChapter, statTime } from './stats'
 import { becauseYouRead, similarTo } from './recs'
+import { malInfo, malTop } from './mal'
 import type { SeriesDetail } from '../preload/index.d'
 import {
   cancelGenreScan,
@@ -799,6 +800,10 @@ app.whenReady().then(async () => {
     similarTo(String(title ?? ''), seriesUrl ? String(seriesUrl) : undefined).catch(() => [])
   )
   ipcMain.handle('recs-because', () => becauseYouRead(1).catch(() => []))
+  ipcMain.handle('mal-info', (_e, title: string) => malInfo(String(title ?? '')).catch(() => null))
+  ipcMain.handle('mal-top', (_e, kind: string) =>
+    malTop(String(kind) as Parameters<typeof malTop>[0]).catch(() => [])
+  )
   ipcMain.handle('fill-gaps', (_e, title: string, sourceId: string, chapters: SeriesDetail['chapters']) =>
     fillGaps(String(title ?? ''), String(sourceId ?? ''), Array.isArray(chapters) ? chapters : []).catch(
       () => []

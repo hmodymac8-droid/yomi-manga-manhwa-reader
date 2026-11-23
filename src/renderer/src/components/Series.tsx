@@ -6,6 +6,7 @@ import { createShareLink, type ShareInfo } from '../shareCard'
 import { OpenChapter, OpenSeries, chapterKey, chapterNumber as numberInTitle, fallbackCover, pageSrc, coverSrc } from '../lib'
 import AniListLinkPanel from './AniListLink'
 import { SimilarRow } from './Similar'
+import { MalLine } from './Mal'
 
 interface Props {
   series: OpenSeries
@@ -468,6 +469,7 @@ export default function Series({ series, onBack, onRead, onOpen, backLabel }: Pr
           </button>
           <Tags detail={detail} />
           <h2>{series.title}</h2>
+          <MalLine title={series.title} />
           {entries.length > 1 && (
             <div className="srcs">
               Read from:{' '}
