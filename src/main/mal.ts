@@ -24,6 +24,7 @@ import {
 
 const WEEK = 7 * 24 * 60 * 60 * 1000
 const DAY = 24 * 60 * 60 * 1000
+const TOP_PAGES = 4
 
 interface Cache {
   info: Record<string, { at: number; info: MalInfo | null }>
@@ -117,18 +118,23 @@ export async function malTop(
   kind: MalTopKind
 ): Promise<{ hit: SearchHit; score: string; rank: number }[]> {
   if (!malOn() || !TOP_URL[kind]) return []
-  let row = load().top[kind]
+  // the first 200 of the list (4 pages of 50); only some of them are on your sites
+  const key = kind + ':200'
+  let row = load().top[key]
   if (!row || Date.now() - row.at > DAY) {
-    const page = await polite(() => fetchHtml(TOP_URL[kind], 20000))
-    if (page.status !== 200) throw new Error('MyAnimeList answered ' + page.status)
-    const items = parseTopPage(page.html).map((i) => ({
-      title: i.title,
-      score: i.score,
-      rank: i.rank
-    }))
-    if (items.length === 0) throw new Error('MyAnimeList top list was empty')
+    const items: { title: string; score: string; rank: number }[] = []
+    for (let from = 0; from < TOP_PAGES * 50; from += 50) {
+      const url = TOP_URL[kind] + (from ? '&limit=' + from : '')
+      const page = await polite(() => fetchHtml(url, 20000)).catch(() => null)
+      const got = page?.status === 200 ? parseTopPage(page.html) : []
+      if (got.length === 0) {
+        if (from === 0) throw new Error('MyAnimeList top list did not answer')
+        break // the rest of the list another day
+      }
+      items.push(...got.map((i) => ({ title: i.title, score: i.score, rank: i.rank })))
+    }
     row = { at: Date.now(), items }
-    load().top[kind] = row
+    load().top[key] = row
     saveSoon()
   }
   const out: { hit: SearchHit; score: string; rank: number }[] = []

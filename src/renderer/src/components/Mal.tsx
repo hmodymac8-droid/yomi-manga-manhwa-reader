@@ -91,6 +91,8 @@ export function MalTopRow({
     }
   }, [kind, rows])
   const list = rows[kind]
+  // one row that fits the window; "Show all" opens the whole list as a grid
+  const [all, setAll] = useState(false)
   // nothing on your sites from any list asked so far (or MyAnimeList is off): no row at all
   if (!list || (list.length === 0 && Object.values(rows).every((r) => !r || r.length === 0)))
     return null
@@ -114,9 +116,14 @@ export function MalTopRow({
             </button>
           ))}
         </span>
+        {list.length > 0 && (
+          <button className="mini fitmore" onClick={() => setAll(!all)}>
+            {all ? 'Show fewer' : `Show all ${list.length}`}
+          </button>
+        )}
       </div>
       {list.length > 0 ? (
-        <div className="strip">
+        <div className={all ? 'fitgrid' : 'fitrow'}>
           {list.map((r) => (
             <HitCard
               key={r.hit.key}
