@@ -922,3 +922,14 @@ select { cursor: pointer; }
 .zlctl button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.28); }
 .zlctl button:disabled { opacity: 0.35; cursor: default; }
 .zlctl b { min-width: 44px; text-align: center; font-variant-numeric: tabular-nums; }
+
+/* MyAnimeList: score line on a series page, top lists on Discover */
+.malline { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: -4px 0 14px; padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; color: var(--muted-foreground); text-decoration: none; }
+.malline b { font-weight: 600; color: var(--foreground); }
+.malline:hover { border-color: var(--primary); color: var(--foreground); }
+.maltop > .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.maltabs { display: inline-flex; gap: 4px; font-family: var(--font-sans, inherit); }
+.maltabs button { border: 1px solid var(--border); background: transparent; color: var(--muted-foreground); font-size: 13px; padding: 4px 10px; border-radius: 999px; cursor: pointer; }
+.maltabs button.on { background: var(--primary); border-color: var(--primary); color: var(--primary-foreground); }
+.maltop > .hint2 { align-items: flex-start; }
+.sitedirmore { align-self: flex-start; margin-left: 0; }

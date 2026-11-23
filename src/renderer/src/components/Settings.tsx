@@ -90,6 +90,28 @@ export default function Settings(): React.JSX.Element {
       </section>
       <section className="setting">
         <div className="settext">
+          <h2>MyAnimeList</h2>
+          <p>
+            Shows a series&apos; MyAnimeList score and rank on its page, and MyAnimeList&apos;s top
+            lists on Discover (only the titles on your sites). To get them, Yomi sends MyAnimeList the
+            title of the series you open (no account, nothing else). Answers are kept for a week.
+          </p>
+        </div>
+        <label className="switch">
+          <input
+            type="checkbox"
+            checked={settings?.myanimelist !== false}
+            disabled={!settings}
+            onChange={(e) =>
+              void window.api.setSettings({ myanimelist: e.target.checked }).then(setSettings)
+            }
+          />
+          <span className="track" aria-hidden="true" />
+          <span>Show MyAnimeList</span>
+        </label>
+      </section>
+      <section className="setting">
+        <div className="settext">
           <h2>Discord</h2>
           <p>
             Shows &ldquo;Playing Yomi&rdquo; on your Discord profile while the app is open, with the

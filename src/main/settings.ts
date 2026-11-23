@@ -19,6 +19,8 @@ export interface AppSettings {
   discord?: boolean
   /** On Discord, also show the series and chapter you are reading. Missing means on. */
   discordDetails?: boolean
+  /** MyAnimeList scores on series pages and its top lists on Discover (sends titles you open). Missing means on. */
+  myanimelist?: boolean
 }
 
 const DEFAULTS: AppSettings = { showLibrary: true }

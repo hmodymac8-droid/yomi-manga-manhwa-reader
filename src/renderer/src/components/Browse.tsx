@@ -13,6 +13,7 @@ import Featured from './Featured'
 import GenreProgress from './GenreProgress'
 import { Icon } from './Icon'
 import { BecauseYouRead } from './Similar'
+import { MalTopRow } from './Mal'
 import { notYetAdded } from '../siteDirectory'
 
 const PAGE = 60
@@ -586,6 +587,10 @@ export default function Browse({
   }
 
   const ready = notYetAdded(sources) // Popular sites you haven't added yet
+  // a few of each language at first, so the list stays small; "Show all" opens the rest (not remembered)
+  const [dirAll, setDirAll] = useState(false)
+  const DIR_FIRST = 4
+  const dirMore = (['ar', 'en'] as const).some((l) => ready.filter((s) => s.lang === l).length > DIR_FIRST)
 
   return (
     <div className="browse" ref={scrollerRef} onWheel={onWheel}>
@@ -651,7 +656,8 @@ export default function Browse({
               </div>
               {dirOpen &&
                 (['ar', 'en'] as const).map((lang) => {
-                  const group = ready.filter((s) => s.lang === lang)
+                  const all = ready.filter((s) => s.lang === lang)
+                  const group = dirAll ? all : all.slice(0, DIR_FIRST)
                   if (group.length === 0) return null
                   return (
                     <div key={lang} className="sitedirgroup">
@@ -664,12 +670,17 @@ export default function Browse({
                           title={s.url}
                           onClick={() => void addSite(s.url)}
                         >
-                          + {s.name}
+                          + <bdi>{s.name}</bdi>
                         </button>
                       ))}
                     </div>
                   )
                 })}
+              {dirOpen && dirMore && (
+                <button className="mini sitedirmore" onClick={() => setDirAll(!dirAll)}>
+                  {dirAll ? 'Show fewer' : `Show all ${ready.length}`}
+                </button>
+              )}
             </div>
           )}
           <div className="sitesbar">
@@ -946,6 +957,7 @@ export default function Browse({
                 </section>
               )}
               {!topQ.trim() && !q.trim() && <BecauseYouRead onOpen={onOpen} />}
+              {!topQ.trim() && !q.trim() && <MalTopRow onOpen={onOpen} />}
               <div className="sechead gridtop" ref={gridTop}>
                 <div>
                   <div className="eyebrow">

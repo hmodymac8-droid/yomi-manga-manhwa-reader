@@ -101,6 +101,8 @@ const api = {
   },
   recsSimilar: (title: string, seriesUrl?: string) => ipcRenderer.invoke('recs-similar', title, seriesUrl),
   recsBecause: () => ipcRenderer.invoke('recs-because'),
+  malInfo: (title: string) => ipcRenderer.invoke('mal-info', title),
+  malTop: (kind: string) => ipcRenderer.invoke('mal-top', kind),
   fillGaps: (title: string, sourceId: string, chapters: unknown[]) =>
     ipcRenderer.invoke('fill-gaps', title, sourceId, chapters),
   pinSite: (title: string, sourceId: string) => ipcRenderer.invoke('pin-site', title, sourceId),

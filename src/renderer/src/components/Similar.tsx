@@ -2,13 +2,15 @@ import { useEffect, useState } from 'react'
 import type { SearchHit } from '../../../preload/index.d'
 import { coverSrc, fallbackCover, type OpenSeries } from '../lib'
 
-/** One title card (the same card as Discover). */
-function HitCard({
+/** One title card (the same card as Discover). `note` replaces the site line (e.g. a MyAnimeList score). */
+export function HitCard({
   h,
-  onOpen
+  onOpen,
+  note
 }: {
   h: SearchHit
   onOpen: (s: OpenSeries) => void
+  note?: string
 }): React.JSX.Element {
   return (
     <button className="card small" onClick={() => onOpen(h)}>
@@ -28,7 +30,7 @@ function HitCard({
         {h.title}
       </div>
       <div className="from">
-        {h.entries.length > 1 ? `${h.entries.length} sites` : h.entries[0]?.sourceName}
+        {note ?? (h.entries.length > 1 ? `${h.entries.length} sites` : h.entries[0]?.sourceName)}
       </div>
     </button>
   )

@@ -177,6 +177,8 @@ export interface AppSettings {
   discord?: boolean
   /** On Discord, also show the series and chapter you are reading. Missing means on. */
   discordDetails?: boolean
+  /** MyAnimeList scores on series pages and its top lists on Discover (sends titles you open). Missing means on. */
+  myanimelist?: boolean
 }
 
 
@@ -388,6 +390,29 @@ export interface EnrichedEntry {
   cover: string
 }
 
+/** What a series page shows from MyAnimeList. */
+export interface MalInfo {
+  id: number
+  url: string
+  /** "8.54", or empty when MyAnimeList has no score yet */
+  score: string
+  scoredBy?: number
+  rank?: number
+  popularity?: number
+  members?: number
+}
+
+/** One title of a MyAnimeList top list. */
+export interface MalTopItem {
+  id: number
+  url: string
+  title: string
+  score: string
+  rank: number
+}
+
+export type MalTopKind = 'popular' | 'manhwa' | 'manga' | 'manhua'
+
 export interface MangaApi {
   /** Start reading a series' chapter list in the background (hovering its cover). */
   prefetchSeries: (sourceId: string, url: string) => Promise<void>
@@ -523,6 +548,10 @@ export interface MangaApi {
   recsSimilar: (title: string, seriesUrl?: string) => Promise<SearchHit[]>
   /** "Because you read X" rows, from the series you read most recently. */
   recsBecause: () => Promise<{ title: string; hits: SearchHit[] }[]>
+  /** MyAnimeList's score, rank and members for a title (null when it isn't sure which entry it is, or is off). */
+  malInfo: (title: string) => Promise<MalInfo | null>
+  /** A MyAnimeList top list, kept to the titles on your sites. */
+  malTop: (kind: MalTopKind) => Promise<{ hit: SearchHit; score: string; rank: number }[]>
   /** Chapters this list lacks (holes, or newer ones) that your other sites have for the same title. */
   fillGaps: (
     title: string,
