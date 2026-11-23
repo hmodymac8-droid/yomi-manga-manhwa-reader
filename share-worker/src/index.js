@@ -1,8 +1,8 @@
 // Yomi share links. The app uploads the finished picture card with a few words about it (POST /new) and gets a short
 // code back; /<code> is the page chat apps read to draw a clickable card, /<code>.jpg is the picture.
 
-const APP_PAGE = 'https://hmodymac8-droid.github.io/yomi/'
-const DOWNLOAD = 'https://github.com/hmodymac8-droid/yomi/releases/latest'
+const APP_PAGE = 'https://hmodymac8-droid.github.io/yomi-manga-manhwa-reader/'
+const DOWNLOAD = 'https://github.com/hmodymac8-droid/yomi-manga-manhwa-reader/releases/latest'
 const YEAR = 60 * 60 * 24 * 365
 const MAX_IMG = 2 * 1024 * 1024
 const ALPHABET = 'abcdefghijkmnpqrstuvwxyz23456789'
