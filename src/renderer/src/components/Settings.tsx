@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { currentLang, setLang } from '../i18n'
 import type {
   AniListImportResult,
   AniListStatus,
@@ -35,6 +36,31 @@ export default function Settings(): React.JSX.Element {
           <p>How Yomi looks and what it shows you.</p>
         </div>
       </div>
+
+      {/* Always in both languages, so anyone can find it */}
+      <section className="setting">
+        <div className="settext">
+          <h2>Language · اللغة</h2>
+          <p>
+            Yomi in English or Arabic. Arabic shows every screen right to left.
+            <br />
+            <span dir="rtl">يومي بالعربية أو الإنجليزية. العربية تعرض كل الشاشات من اليمين لليسار.</span>
+          </p>
+        </div>
+        <div className="langpick" role="radiogroup" aria-label="Language">
+          {(['en', 'ar'] as const).map((l) => (
+            <button
+              key={l}
+              role="radio"
+              aria-checked={currentLang() === l}
+              className={currentLang() === l ? 'on' : ''}
+              onClick={() => currentLang() !== l && setLang(l)}
+            >
+              {l === 'en' ? 'English' : 'العربية'}
+            </button>
+          ))}
+        </div>
+      </section>
 
       <section className="setting">
         <div className="settext">

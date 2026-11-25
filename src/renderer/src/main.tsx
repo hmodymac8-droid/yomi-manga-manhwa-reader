@@ -1,11 +1,17 @@
 import '@fontsource-variable/dm-sans'
 import '@fontsource-variable/newsreader/opsz.css'
+// Arabic letters (the fonts above have none): only downloaded by the window when Arabic text is on screen
+import '@fontsource-variable/noto-sans-arabic'
+import '@fontsource-variable/noto-naskh-arabic'
 import './assets/main.css'
 
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
+import { applyLang } from './i18n'
 import MiniApp from './MiniApp'
+
+applyLang() // English or Arabic (right to left), before anything is drawn
 
 const mini =
   window.api.isMini || new URLSearchParams(window.location.search).get('mini') === '1'

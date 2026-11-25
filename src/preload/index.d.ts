@@ -181,6 +181,8 @@ export interface AppSettings {
   myanimelist?: boolean
   /** Check every site once a day in the background. Missing means on. */
   siteWatch?: boolean
+  /** The app's language. Missing means English. */
+  language?: 'en' | 'ar'
 }
 
 
