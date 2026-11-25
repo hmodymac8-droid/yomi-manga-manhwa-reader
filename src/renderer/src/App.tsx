@@ -344,13 +344,15 @@ function AppInner({ mini }: { mini: boolean }): React.JSX.Element {
 
   const reading = view.name === 'reader'
   const onBrowse = view.name === 'browse' || view.name === 'added'
+  // broken sites, as a number on the Sites tab
+  const brokenSites = sources.filter((s) => levelOf(health[s.id]) === 'fail').length
   const nav: { id: View['name']; label: string; icon: string; n?: number }[] = [
     { id: 'browse', label: 'Discover', icon: 'home' },
     { id: 'new', label: 'New', icon: 'bell', n: newCount || undefined },
     { id: 'following', label: 'Following', icon: 'bookmark', n: upd?.following },
     { id: 'added', label: 'Added by me', icon: 'library', n: addedCount },
     { id: 'downloads', label: 'Downloads', icon: 'download', n: queued || undefined },
-    { id: 'sites', label: 'Sites', icon: 'globe' },
+    { id: 'sites', label: 'Sites', icon: 'globe', n: brokenSites || undefined },
     { id: 'stats', label: 'Stats', icon: 'chart' },
     { id: 'settings', label: 'Settings', icon: 'settings' }
   ]

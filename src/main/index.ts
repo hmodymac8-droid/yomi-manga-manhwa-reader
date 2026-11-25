@@ -1,6 +1,6 @@
-import { app, dialog, shell, BrowserWindow, ipcMain, net, session } from 'electron'
+import { app, dialog, shell, BrowserWindow, ipcMain, net, Notification, session } from 'electron'
 import { getSettings, setSettings, type AppSettings } from './settings'
-import { presenceSettingsChanged, setPresence, startPresence, stopPresence } from './discord'
+import { presenceSettingsChanged, screenNow, setPresence, startPresence, stopPresence } from './discord'
 import type { PresenceInput } from './discordLogic'
 import { pageBytes } from './pagebytes'
 import { unseal } from './sealed'
@@ -17,6 +17,7 @@ import { gzipSync } from 'zlib'
 import { flushStats, readingStats, statChapter, statTime } from './stats'
 import { becauseYouRead, similarTo } from './recs'
 import { malInfo, malTop } from './mal'
+import { runWatch, startSiteWatch, watchStatus } from './siteWatch'
 import type { SeriesDetail } from '../preload/index.d'
 import {
   cancelGenreScan,
@@ -79,7 +80,7 @@ import {
   sourcesWithSeriesAsList
 } from './catalog'
 import { allHealth, dropHealth, flushHealth, healthOf, recordCheck, recordOpen, recordOpenSpeed } from './health'
-import { classifyFailure } from './repair'
+import { classifyFailure, isBlockedSource } from './repair'
 import {
   commitFailure,
   onSourceSignal,
@@ -850,6 +851,37 @@ app.whenReady().then(async () => {
     await checking.get(id)
     return healthOf(id)
   })
+  // The daily site check (see siteWatch.ts): the same check, every site, once a day, waiting while you read.
+  const tellWatch = (): void => {
+    for (const w of BrowserWindow.getAllWindows()) w.webContents.send('watch-changed')
+  }
+  ipcMain.handle('watch-status', () => watchStatus())
+  ipcMain.handle('watch-run', () => runWatch())
+  // (dev runs leave it off; MR_WATCHTEST=1 turns it on to try it)
+  if (!smoke || process.env['MR_WATCHTEST'])
+    startSiteWatch({
+      sites: () =>
+        listSources()
+          .filter((s) => !s.hidden && !isBlockedSource(s.id, s.baseUrl))
+          .map((s) => ({ id: s.id, name: s.name })),
+      check: async (id) => {
+        if (!checking.has(id)) checking.set(id, runSiteCheck(id).finally(() => checking.delete(id)))
+        await checking.get(id)
+        return healthOf(id).check
+      },
+      rescan: (id) => crawlSource(id, emit),
+      reading: () => screenNow() === 'reader',
+      changed: tellWatch,
+      broke: (names) => {
+        if (!Notification.isSupported()) return
+        new Notification({
+          title: names.length === 1 ? `${names[0]} stopped working` : `${names.length} sites stopped working`,
+          body:
+            (names.length > 1 ? names.slice(0, 4).join(', ') + '. ' : '') +
+            'Yomi reads their series from your other sites meanwhile. Open Sites to see why.'
+        }).show()
+      }
+    })
   ipcMain.handle('crawl', (_e, id: string) => void crawlSource(id, emit))
   ipcMain.handle('cancel-crawl', (_e, id: string) => cancelCrawl(id))
   ipcMain.handle(

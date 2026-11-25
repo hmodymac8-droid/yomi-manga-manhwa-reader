@@ -90,6 +90,28 @@ export default function Settings(): React.JSX.Element {
       </section>
       <section className="setting">
         <div className="settext">
+          <h2>Daily site check</h2>
+          <p>
+            Once a day Yomi tries every site the way you use it: its titles, a chapter list, a
+            chapter&apos;s pages and one picture. It waits while you read. When a site breaks you get a
+            notice and Sites says why; simple problems are fixed by themselves.
+          </p>
+        </div>
+        <label className="switch">
+          <input
+            type="checkbox"
+            checked={settings?.siteWatch !== false}
+            disabled={!settings}
+            onChange={(e) =>
+              void window.api.setSettings({ siteWatch: e.target.checked }).then(setSettings)
+            }
+          />
+          <span className="track" aria-hidden="true" />
+          <span>Check my sites every day</span>
+        </label>
+      </section>
+      <section className="setting">
+        <div className="settext">
           <h2>MyAnimeList</h2>
           <p>
             Shows a series&apos; MyAnimeList score and rank on its page, and MyAnimeList&apos;s top

@@ -102,6 +102,13 @@ const api = {
   recsSimilar: (title: string, seriesUrl?: string) => ipcRenderer.invoke('recs-similar', title, seriesUrl),
   recsBecause: () => ipcRenderer.invoke('recs-because'),
   malInfo: (title: string) => ipcRenderer.invoke('mal-info', title),
+  watchStatus: () => ipcRenderer.invoke('watch-status'),
+  watchRun: () => ipcRenderer.invoke('watch-run'),
+  onWatch: (cb: () => void) => {
+    const h = (): void => cb()
+    ipcRenderer.on('watch-changed', h)
+    return () => ipcRenderer.removeListener('watch-changed', h)
+  },
   malTop: (kind: string) => ipcRenderer.invoke('mal-top', kind),
   fillGaps: (title: string, sourceId: string, chapters: unknown[]) =>
     ipcRenderer.invoke('fill-gaps', title, sourceId, chapters),

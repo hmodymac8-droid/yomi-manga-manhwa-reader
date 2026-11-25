@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import GenreProgress from './GenreProgress'
 import DeleteSite from './DeleteSite'
-import type { SiteHealth, SourceInfo } from '../../../preload/index.d'
+import type { SiteHealth, SiteWatchStatus, SourceInfo } from '../../../preload/index.d'
 
 const ago = (t: number): string => {
   const s = Math.max(0, Math.round((Date.now() - t) / 1000))
@@ -80,12 +80,20 @@ export default function Sites({ onBack }: { onBack: () => void }): React.JSX.Ele
     return () => clearInterval(t)
   }, [])
 
-  const checkAll = async (): Promise<void> => {
-    // one after another: each check opens real pages on the site
-    for (const s of sources) await check(s.id)
-  }
+  // The daily check (runs by itself once a day; "Check all now" starts it at once)
+  const [watch, setWatch] = useState<SiteWatchStatus | null>(null)
+  useEffect(() => {
+    const load = (): void => void window.api.watchStatus().then(setWatch)
+    load()
+    const off = window.api.onWatch(() => {
+      load()
+      void refresh()
+    })
+    return off
+  }, [refresh])
+  const checkAll = (): void => void window.api.watchRun()
 
-  const anyBusy = Object.values(busy).some(Boolean)
+  const anyBusy = Object.values(busy).some(Boolean) || !!watch?.progress
   const order: Record<Level, number> = { fail: 0, warn: 1, unknown: 2, ok: 3 }
   const rows = [...sources].sort((a, b) => order[levelOf(health[a.id])] - order[levelOf(health[b.id])])
 
@@ -101,14 +109,15 @@ export default function Sites({ onBack }: { onBack: () => void }): React.JSX.Ele
           </p>
         </div>
         <div className="pageact">
-          <button onClick={() => void checkAll()} disabled={anyBusy || sources.length === 0}>
-            {anyBusy ? 'Checking…' : 'Re-check all'}
+          <button onClick={checkAll} disabled={anyBusy || sources.length === 0}>
+            {watch?.progress ? 'Checking…' : 'Check all now'}
           </button>
           <button className="primary" onClick={onBack}>
             Add site
           </button>
         </div>
       </div>
+      <WatchSummary watch={watch} />
       <GenreProgress startOpen />
       {hiddenCount > 0 && (
         <div className="sub" style={{ margin: '0 8px 12px' }}>
@@ -129,6 +138,7 @@ export default function Sites({ onBack }: { onBack: () => void }): React.JSX.Ele
                 <span className="sub">{s.baseUrl.replace(/^https?:\/\//, '').replace(/\/$/, '')}</span>
               </div>
               <span className={'lvl ' + level}>{LABEL[level]}</span>
+              <DayStrip days={watch?.sites[s.id]?.days} />
               <span className="sub">
                 {s.count.toLocaleString()} titles{s.crawling ? ' · scanning…' : ''}
               </span>
@@ -164,6 +174,15 @@ export default function Sites({ onBack }: { onBack: () => void }): React.JSX.Ele
                 Delete
               </button>
             </div>
+            {watch?.sites[s.id] && (watch.sites[s.id].cause !== 'ok' || watch.sites[s.id].fixed) && (
+              <div className={'whyline ' + level}>
+                {watch.sites[s.id].fixed && <b>Fixed by itself: </b>}
+                {watch.sites[s.id].fixed ?? watch.sites[s.id].text}
+                {watch.sites[s.id].brokeAt && level === 'fail' && (
+                  <span className="sub"> · broken since {ago(watch.sites[s.id].brokeAt!)}</span>
+                )}
+              </div>
+            )}
             {open[s.id] && (
               <div className="sitebody">
                 <div className="sub">
@@ -219,5 +238,54 @@ export default function Sites({ onBack }: { onBack: () => void }): React.JSX.Ele
       })}
       {deleting && <DeleteSite site={deleting} onKeep={() => setDeleting(null)} onDelete={() => void remove(deleting)} />}
     </div>
+  )
+}
+
+/** The daily check at the top of Sites: when it last ran and how the sites did, or how far the run going now is. */
+function WatchSummary({ watch }: { watch: SiteWatchStatus | null }): React.JSX.Element | null {
+  if (!watch) return null
+  const p = watch.progress
+  // how the sites did on their last check (the sites the daily check tries; skipped ones aren't counted)
+  const last = Object.values(watch.sites).map((x) => x.days.at(-1)?.o)
+  const n = (l: 'ok' | 'warn' | 'fail'): number => last.filter((x) => x === l).length
+  return (
+    <div className="watchsum">
+      <b>Daily check</b>
+      {p ? (
+        <span>
+          Checking {Math.min(p.done + 1, p.total)} of {p.total}: {p.current}
+          {p.doing && p.doing !== 'checking' ? ` (${p.doing})` : ''}…
+          <span className="watchbar">
+            <span style={{ width: `${p.total ? Math.round((p.done / p.total) * 100) : 0}%` }} />
+          </span>
+        </span>
+      ) : watch.finishedAt ? (
+        <span>
+          {ago(watch.finishedAt)}: {n('ok')} working
+          {n('warn') > 0 && <> · <span className="warn">{n('warn')} {n('warn') === 1 ? 'needs' : 'need'} a look</span></>}
+          {n('fail') > 0 && <> · <span className="fail">{n('fail')} broken</span></>}
+          {!watch.on && ' · the daily check is off in Settings'}
+        </span>
+      ) : (
+        <span>
+          {watch.on
+            ? 'Every site is tried once a day in the background (it waits while you read). The first run starts a few minutes after Yomi opens.'
+            : 'Off in Settings. "Check all now" still runs it once.'}
+        </span>
+      )}
+    </div>
+  )
+}
+
+/** The last 14 days of a site, one square a day (oldest left). */
+function DayStrip({ days }: { days?: { d: string; o: 'ok' | 'warn' | 'fail' }[] }): React.JSX.Element | null {
+  if (!days || days.length === 0) return null
+  const word = { ok: 'worked', warn: 'half worked', fail: 'broken' }
+  return (
+    <span className="daystrip" title="The daily check, last 14 days">
+      {days.map((x) => (
+        <i key={x.d} className={x.o} title={`${x.d}: ${word[x.o]}`} />
+      ))}
+    </span>
   )
 }
