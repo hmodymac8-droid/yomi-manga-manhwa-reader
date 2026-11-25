@@ -1,4 +1,5 @@
 import { app, BrowserWindow, clipboard, session } from 'electron'
+import { mt } from './lang'
 import { pickPageGroup } from './staticParse'
 import { COMMAND_RE, FAKE_CHECK_RE } from './fakeCheck'
 
@@ -302,7 +303,7 @@ export function waitForHuman(url: string): Promise<HumanCheck> {
     width: 980,
     height: 760,
     show: true,
-    title: `Yomi: site check for ${host}`,
+    title: mt('Yomi: site check for {host}', { host }),
     autoHideMenuBar: true,
     webPreferences: { partition: PARTITION, sandbox: true, contextIsolation: true }
   })

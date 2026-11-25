@@ -1,4 +1,5 @@
 import { app, BrowserWindow, Notification, nativeImage, type NativeImage } from 'electron'
+import { mt } from './lang'
 import { join } from 'path'
 import type {
   DownloadRequest,
@@ -255,12 +256,14 @@ async function notify(found: { rec: FollowRecord; fresh: NewChapter[] }[]): Prom
     found.forEach(({ rec, fresh }, i) =>
       show(
         rec.title,
-        fresh.length === 1 ? `${fresh[0].title} is out` : `${fresh.length} new chapters are out`,
+        fresh.length === 1
+          ? mt('{chapter} is out', { chapter: fresh[0].title })
+          : mt('{n} new chapters are out', { n: fresh.length }),
         icons[i]
       )
     )
   } else {
-    show('New chapters', `${found.length} series you follow have new chapters`)
+    show(mt('New chapters'), mt('{n} series you follow have new chapters', { n: found.length }))
   }
 }
 

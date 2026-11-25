@@ -1,4 +1,5 @@
 import { app, dialog, shell, BrowserWindow, ipcMain, net, Notification, session } from 'electron'
+import { mt } from './lang'
 import { getSettings, setSettings, type AppSettings } from './settings'
 import { presenceSettingsChanged, screenNow, setPresence, startPresence, stopPresence } from './discord'
 import type { PresenceInput } from './discordLogic'
@@ -781,7 +782,7 @@ app.whenReady().then(async () => {
     if (mihonRunning) throw new Error('An import is already running')
     const win = BrowserWindow.fromWebContents(e.sender) ?? undefined
     const pick = await dialog.showOpenDialog(win as BrowserWindow, {
-      title: 'Choose a Mihon or Tachiyomi backup',
+      title: mt('Choose a Mihon or Tachiyomi backup'),
       filters: [{ name: 'Mihon / Tachiyomi backup', extensions: ['tachibk', 'gz', 'proto'] }, { name: 'All files', extensions: ['*'] }],
       properties: ['openFile']
     })
@@ -875,10 +876,13 @@ app.whenReady().then(async () => {
       broke: (names) => {
         if (!Notification.isSupported()) return
         new Notification({
-          title: names.length === 1 ? `${names[0]} stopped working` : `${names.length} sites stopped working`,
+          title:
+            names.length === 1
+              ? mt('{site} stopped working', { site: names[0] })
+              : mt('{n} sites stopped working', { n: names.length }),
           body:
             (names.length > 1 ? names.slice(0, 4).join(', ') + '. ' : '') +
-            'Yomi reads their series from your other sites meanwhile. Open Sites to see why.'
+            mt('Yomi reads their series from your other sites meanwhile. Open Sites to see why.')
         }).show()
       }
     })
@@ -1009,7 +1013,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('offline-set', (_e, on: boolean) => setOffline(!!on))
   ipcMain.handle('download-export-cbz', async (_e, ids: string[]) => {
     const r = await dialog.showOpenDialog({
-      title: 'Choose a folder for the .cbz files',
+      title: mt('Choose a folder for the .cbz files'),
       properties: ['openDirectory', 'createDirectory']
     })
     if (r.canceled || r.filePaths.length === 0) return null
