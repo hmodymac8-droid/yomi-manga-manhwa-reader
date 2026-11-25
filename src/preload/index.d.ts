@@ -179,6 +179,8 @@ export interface AppSettings {
   discordDetails?: boolean
   /** MyAnimeList scores on series pages and its top lists on Discover (sends titles you open). Missing means on. */
   myanimelist?: boolean
+  /** Check every site once a day in the background. Missing means on. */
+  siteWatch?: boolean
 }
 
 
@@ -246,6 +248,40 @@ export interface SiteHealth {
   nextProbeAt?: number
   /** How long the last successful re-check took. Lower is faster. */
   speedMs?: number
+}
+
+/** Why the daily check thinks a site works, half works or doesn't. */
+export type SiteWatchCause =
+  | 'ok'
+  | 'partial'
+  | 'titles'
+  | 'check'
+  | 'moved'
+  | 'down'
+  | 'pictures'
+  | 'changed'
+  | 'other'
+
+/** One site in the daily check. */
+export interface SiteWatchSite {
+  /** The last 14 days, oldest first. */
+  days: { d: string; o: 'ok' | 'warn' | 'fail' }[]
+  cause: SiteWatchCause
+  /** What was found, in plain words. */
+  text: string
+  /** What Yomi fixed by itself on the last run. */
+  fixed?: string
+  /** Since when it has been broken. */
+  brokeAt?: number
+}
+
+/** The daily site check: the last run, the one going now, and every site's days. */
+export interface SiteWatchStatus {
+  on: boolean
+  startedAt?: number
+  finishedAt?: number
+  progress: { done: number; total: number; current: string; doing: string } | null
+  sites: Record<string, SiteWatchSite>
 }
 
 /** How a site is doing for you, shown as a dot on the series page. */
@@ -548,6 +584,12 @@ export interface MangaApi {
   recsSimilar: (title: string, seriesUrl?: string) => Promise<SearchHit[]>
   /** "Because you read X" rows, from the series you read most recently. */
   recsBecause: () => Promise<{ title: string; hits: SearchHit[] }[]>
+  /** The daily site check: last run, the one going now and every site's last 14 days. */
+  watchStatus: () => Promise<SiteWatchStatus>
+  /** Checks every site now (joins a run that is going). */
+  watchRun: () => Promise<void>
+  /** Called when the daily check moves on (a site done, a run started or finished). */
+  onWatch: (cb: () => void) => () => void
   /** MyAnimeList's score, rank and members for a title (null when it isn't sure which entry it is, or is off). */
   malInfo: (title: string) => Promise<MalInfo | null>
   /** A MyAnimeList top list, kept to the titles on your sites. */

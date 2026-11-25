@@ -951,3 +951,19 @@ select { cursor: pointer; }
   .searchfield kbd, .qobtn { display: none; }
 }
 @media (max-width: 760px) { .nav { gap: 14px; } .navitem .n { display: none; } }
+
+/* Sites: the daily check */
+.watchsum { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 0 8px 14px; padding: 12px 16px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; color: var(--muted-foreground); }
+.watchsum b { color: var(--foreground); font-weight: 600; }
+.watchsum .warn { color: var(--warning); }
+.watchsum .fail { color: var(--destructive); }
+.watchbar { display: inline-block; vertical-align: middle; width: 140px; height: 4px; margin-left: 10px; border-radius: 2px; background: var(--muted); overflow: hidden; }
+.watchbar span { display: block; height: 100%; background: var(--primary); transition: width 0.4s; }
+.daystrip { display: inline-flex; gap: 2px; align-items: center; }
+.daystrip i { width: 7px; height: 12px; border-radius: 2px; background: var(--muted); }
+.daystrip i.ok { background: var(--success); }
+.daystrip i.warn { background: var(--warning); }
+.daystrip i.fail { background: var(--destructive); }
+.whyline { margin: 2px 0 4px 26px; font-size: 13px; color: var(--muted-foreground); }
+.whyline.fail { color: color-mix(in oklab, var(--destructive) 70%, var(--foreground)); }
+.whyline b { color: var(--success); font-weight: 600; }

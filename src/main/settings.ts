@@ -21,6 +21,8 @@ export interface AppSettings {
   discordDetails?: boolean
   /** MyAnimeList scores on series pages and its top lists on Discover (sends titles you open). Missing means on. */
   myanimelist?: boolean
+  /** Check every site once a day in the background. Missing means on. */
+  siteWatch?: boolean
 }
 
 const DEFAULTS: AppSettings = { showLibrary: true }

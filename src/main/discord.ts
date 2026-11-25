@@ -117,6 +117,9 @@ function sendSoon(): void {
   sendTimer = setTimeout(send, 1500)
 }
 
+/** The screen the main window shows right now ("reader" while you read). */
+export const screenNow = (): string => current.screen
+
 /** The window reports the screen it shows. */
 export function setPresence(p: PresenceInput): void {
   current = p
