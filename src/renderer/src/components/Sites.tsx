@@ -117,7 +117,7 @@ export default function Sites({ onBack }: { onBack: () => void }): React.JSX.Ele
           </button>
         </div>
       </div>
-      <WatchSummary watch={watch} levels={sources.map((s) => levelOf(health[s.id]))} />
+      <WatchSummary watch={watch} />
       <GenreProgress startOpen />
       {hiddenCount > 0 && (
         <div className="sub" style={{ margin: '0 8px 12px' }}>
@@ -242,10 +242,12 @@ export default function Sites({ onBack }: { onBack: () => void }): React.JSX.Ele
 }
 
 /** The daily check at the top of Sites: when it last ran and how the sites did, or how far the run going now is. */
-function WatchSummary({ watch, levels }: { watch: SiteWatchStatus | null; levels: Level[] }): React.JSX.Element | null {
+function WatchSummary({ watch }: { watch: SiteWatchStatus | null }): React.JSX.Element | null {
   if (!watch) return null
   const p = watch.progress
-  const n = (l: Level): number => levels.filter((x) => x === l).length
+  // how the sites did on their last check (the sites the daily check tries; skipped ones aren't counted)
+  const last = Object.values(watch.sites).map((x) => x.days.at(-1)?.o)
+  const n = (l: 'ok' | 'warn' | 'fail'): number => last.filter((x) => x === l).length
   return (
     <div className="watchsum">
       <b>Daily check</b>
@@ -260,7 +262,7 @@ function WatchSummary({ watch, levels }: { watch: SiteWatchStatus | null; levels
       ) : watch.finishedAt ? (
         <span>
           {ago(watch.finishedAt)}: {n('ok')} working
-          {n('warn') > 0 && <> · <span className="warn">{n('warn')} need a look</span></>}
+          {n('warn') > 0 && <> · <span className="warn">{n('warn')} {n('warn') === 1 ? 'needs' : 'need'} a look</span></>}
           {n('fail') > 0 && <> · <span className="fail">{n('fail')} broken</span></>}
           {!watch.on && ' · the daily check is off in Settings'}
         </span>
