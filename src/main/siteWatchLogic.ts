@@ -11,8 +11,11 @@ export type { SiteWatchCause }
 /** What the check found, why, and what Yomi can try by itself. */
 export interface Diagnosis {
   cause: SiteWatchCause
-  /** One or two plain sentences for the Sites screen. */
+  /** One or two plain sentences for the Sites screen (filled in). */
   text: string
+  /** The same sentence with {step} / {detail} left open, so the screen can show it in your language. */
+  tpl: string
+  vars?: Record<string, string>
   /** A fix Yomi can try without you: read the site's title list again. */
   fix?: 'rescan'
 }
@@ -22,54 +25,71 @@ const firstBad = (steps: HealthStep[], status: 'fail' | 'warn'): HealthStep | un
 
 /** Why a site failed (or only half worked), from the steps of its check. */
 export function diagnose(overall: 'ok' | 'warn' | 'fail', steps: HealthStep[]): Diagnosis {
+  const d = diagnoseRaw(overall, steps)
+  const vars = d.vars
+  const text = vars ? d.tpl.replace(/\{(\w+)\}/g, (m, k: string) => vars[k] ?? m) : d.tpl
+  return { ...d, text }
+}
+
+function diagnoseRaw(
+  overall: 'ok' | 'warn' | 'fail',
+  steps: HealthStep[]
+): Omit<Diagnosis, 'text'> {
   if (overall === 'ok')
-    return { cause: 'ok', text: 'Everything works: titles, chapters, pages and pictures.' }
+    return { cause: 'ok', tpl: 'Everything works: titles, chapters, pages and pictures.' }
   const bad = firstBad(steps, 'fail') ?? firstBad(steps, 'warn')
-  if (!bad) return { cause: 'ok', text: 'Everything works: titles, chapters, pages and pictures.' }
+  if (!bad) return { cause: 'ok', tpl: 'Everything works: titles, chapters, pages and pictures.' }
   if (bad.status === 'warn')
-    return { cause: 'partial', text: `Works, with a catch. ${bad.name}: ${bad.detail}.` }
+    return {
+      cause: 'partial',
+      tpl: 'Works, with a catch. {step}: {detail}.',
+      vars: { step: bad.name, detail: bad.detail }
+    }
   if (bad.name === 'Title list')
     return {
       cause: 'titles',
-      text: 'No titles are saved for this site, so there was nothing to open.',
+      tpl: 'No titles are saved for this site, so there was nothing to open.',
       fix: 'rescan'
     }
   switch (classifyFailure(bad.detail)) {
     case 'cloudflare':
       return {
         cause: 'check',
-        text: 'The site asks for a "verify you are human" check. Open one of its series in Yomi and pass the check once.'
+        tpl: 'The site asks for a "verify you are human" check. Open one of its series in Yomi and pass the check once.'
       }
     case 'moved':
       return {
         cause: 'moved',
-        text: 'The site seems to have moved to a new address. Yomi looks for it and switches over by itself.'
+        tpl: 'The site seems to have moved to a new address. Yomi looks for it and switches over by itself.'
       }
     case 'network':
     case 'timeout':
       return {
         cause: 'down',
-        text: "The site didn't answer. It may be down for now; Yomi tries again later and uses your other sites meanwhile."
+        tpl: "The site didn't answer. It may be down for now; Yomi tries again later and uses your other sites meanwhile."
       }
     case 'http':
       return {
         cause: 'down',
-        text: `The site answered with an error (${bad.detail}). It is often down for a short while; Yomi tries again later.`
+        tpl: 'The site answered with an error ({detail}). It is often down for a short while; Yomi tries again later.',
+        vars: { detail: bad.detail }
       }
   }
   if (bad.name === 'Image')
     return {
       cause: 'pictures',
-      text: 'Chapters open, but the site refused to send the pictures. Yomi reads those chapters from your other sites.'
+      tpl: 'Chapters open, but the site refused to send the pictures. Yomi reads those chapters from your other sites.'
     }
   if (bad.name === 'Chapter list' || bad.name === 'Chapter pages')
     return {
       cause: 'changed',
-      text: `The site seems to have changed how its pages are built, so Yomi can't read its ${
-        bad.name === 'Chapter list' ? 'chapter lists' : 'chapter pages'
-      } right now (${bad.detail}).`
+      tpl:
+        bad.name === 'Chapter list'
+          ? "The site seems to have changed how its pages are built, so Yomi can't read its chapter lists right now ({detail})."
+          : "The site seems to have changed how its pages are built, so Yomi can't read its chapter pages right now ({detail}).",
+      vars: { detail: bad.detail }
     }
-  return { cause: 'other', text: `${bad.name}: ${bad.detail}.` }
+  return { cause: 'other', tpl: '{step}: {detail}.', vars: { step: bad.name, detail: bad.detail } }
 }
 
 /** The day a check belongs to, in your own time zone ("2026-11-25"). */

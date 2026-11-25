@@ -21,6 +21,8 @@ interface Saved {
     {
       days: DayResult[]
       text?: string
+      tpl?: string
+      vars?: Record<string, string>
       cause?: SiteWatchSite['cause']
       fixed?: string
       brokeAt?: number
@@ -95,6 +97,8 @@ async function checkOne(id: string, name: string): Promise<'ok' | 'warn' | 'fail
   rec.days = pushDay(rec.days, dayKey(Date.now()), overall)
   rec.cause = diag.cause
   rec.text = diag.text
+  rec.tpl = diag.tpl
+  rec.vars = diag.vars
   rec.fixed = fixed
   if (overall === 'fail') rec.brokeAt ??= Date.now()
   else delete rec.brokeAt
@@ -155,6 +159,8 @@ export function watchStatus(): SiteWatchStatus {
           days: r.days,
           cause: r.cause ?? 'other',
           text: r.text ?? '',
+          tpl: r.tpl ?? r.text ?? '',
+          vars: r.vars,
           fixed: r.fixed,
           brokeAt: r.brokeAt
         }

@@ -271,6 +271,9 @@ export interface SiteWatchSite {
   cause: SiteWatchCause
   /** What was found, in plain words. */
   text: string
+  /** The same with {step} / {detail} open, for showing it in your language: t(tpl, vars). */
+  tpl: string
+  vars?: Record<string, string>
   /** What Yomi fixed by itself on the last run. */
   fixed?: string
   /** Since when it has been broken. */
