@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { currentLang, num, setLang, t } from '../i18n'
+import { IS_WEB } from '../lib'
 import type {
   AniListImportResult,
   AniListStatus,
@@ -42,9 +43,13 @@ export default function Settings(): React.JSX.Element {
         <div className="settext">
           <h2>Language · اللغة</h2>
           <p>
-            <span dir="ltr">Yomi in English or Arabic. Arabic shows every screen right to left.</span>
+            <span dir="ltr">
+              Yomi in English or Arabic. Arabic shows every screen right to left.
+            </span>
             <br />
-            <span dir="rtl">يومي بالعربية أو الإنجليزية. العربية تعرض كل الشاشات من اليمين لليسار.</span>
+            <span dir="rtl">
+              يومي بالعربية أو الإنجليزية. العربية تعرض كل الشاشات من اليمين لليسار.
+            </span>
           </p>
         </div>
         <div className="langpick" role="radiogroup" aria-label="Language">
@@ -62,145 +67,156 @@ export default function Settings(): React.JSX.Element {
         </div>
       </section>
 
-      <section className="setting">
-        <div className="settext">
-          <h2>{t('Yomi Library')}</h2>
-          <p>
-            {t(
-              'Ready-made sites that come with your Yomi account: their titles and genres are already loaded, so you can search and read straight away. Sites you add yourself are always shown.'
-            )}
-          </p>
-          <p className="sub">
-            {library.length > 0
-              ? t(
-                  library.length === 1
-                    ? '{n} Library site · {titles} titles on this computer.'
-                    : '{n} Library sites · {titles} titles on this computer.',
-                  { n: num(library.length), titles: num(titles) }
-                )
-              : t('No Library sites on this computer yet. They arrive when you sign in to your Yomi account.')}{' '}
-            {t('Hiding them keeps everything saved; turn this back on to see them again.')}
-          </p>
-        </div>
-        <label className="switch">
-          <input
-            type="checkbox"
-            checked={settings?.showLibrary ?? true}
-            disabled={!settings}
-            onChange={() => void toggle()}
-          />
-          <span className="track" aria-hidden="true" />
-          <span>{t('Show the Yomi Library')}</span>
-        </label>
-      </section>
+      {/* the rest are Windows app settings */}
+      {!IS_WEB && (
+        <>
+          <section className="setting">
+            <div className="settext">
+              <h2>{t('Yomi Library')}</h2>
+              <p>
+                {t(
+                  'Ready-made sites that come with your Yomi account: their titles and genres are already loaded, so you can search and read straight away. Sites you add yourself are always shown.'
+                )}
+              </p>
+              <p className="sub">
+                {library.length > 0
+                  ? t(
+                      library.length === 1
+                        ? '{n} Library site · {titles} titles on this computer.'
+                        : '{n} Library sites · {titles} titles on this computer.',
+                      { n: num(library.length), titles: num(titles) }
+                    )
+                  : t(
+                      'No Library sites on this computer yet. They arrive when you sign in to your Yomi account.'
+                    )}{' '}
+                {t('Hiding them keeps everything saved; turn this back on to see them again.')}
+              </p>
+            </div>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={settings?.showLibrary ?? true}
+                disabled={!settings}
+                onChange={() => void toggle()}
+              />
+              <span className="track" aria-hidden="true" />
+              <span>{t('Show the Yomi Library')}</span>
+            </label>
+          </section>
 
-      <AutoDownloadSetting />
+          <AutoDownloadSetting />
 
-      <section className="setting">
-        <div className="settext">
-          <h2>{t('Recommendations')}</h2>
-          <p>
-            {t(
-              "“Similar on your sites” on a series page and “Because you read” on Discover come from AniList's community recommendations. To get them, Yomi sends AniList the title of the series you open or read recently (no account, nothing else). Answers are kept for a week."
+          <section className="setting">
+            <div className="settext">
+              <h2>{t('Recommendations')}</h2>
+              <p>
+                {t(
+                  "“Similar on your sites” on a series page and “Because you read” on Discover come from AniList's community recommendations. To get them, Yomi sends AniList the title of the series you open or read recently (no account, nothing else). Answers are kept for a week."
+                )}
+              </p>
+            </div>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={settings?.recommendations !== false}
+                disabled={!settings}
+                onChange={(e) =>
+                  void window.api
+                    .setSettings({ recommendations: e.target.checked })
+                    .then(setSettings)
+                }
+              />
+              <span className="track" aria-hidden="true" />
+              <span>{t('Show recommendations')}</span>
+            </label>
+          </section>
+          <section className="setting">
+            <div className="settext">
+              <h2>{t('Daily site check')}</h2>
+              <p>
+                {t(
+                  "Once a day Yomi tries every site the way you use it: its titles, a chapter list, a chapter's pages and one picture. It waits while you read. When a site breaks you get a notice and Sites says why; simple problems are fixed by themselves."
+                )}
+              </p>
+            </div>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={settings?.siteWatch !== false}
+                disabled={!settings}
+                onChange={(e) =>
+                  void window.api.setSettings({ siteWatch: e.target.checked }).then(setSettings)
+                }
+              />
+              <span className="track" aria-hidden="true" />
+              <span>{t('Check my sites every day')}</span>
+            </label>
+          </section>
+          <section className="setting">
+            <div className="settext">
+              <h2>MyAnimeList</h2>
+              <p>
+                {t(
+                  "Shows a series' MyAnimeList score and rank on its page, and MyAnimeList's top lists on Discover (only the titles on your sites). To get them, Yomi sends MyAnimeList the title of the series you open (no account, nothing else). Answers are kept for a week."
+                )}
+              </p>
+            </div>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={settings?.myanimelist !== false}
+                disabled={!settings}
+                onChange={(e) =>
+                  void window.api.setSettings({ myanimelist: e.target.checked }).then(setSettings)
+                }
+              />
+              <span className="track" aria-hidden="true" />
+              <span>{t('Show MyAnimeList')}</span>
+            </label>
+          </section>
+          <section className="setting">
+            <div className="settext">
+              <h2>Discord</h2>
+              <p>
+                {t(
+                  'Shows “Playing Yomi” on your Discord profile while the app is open, with the series and chapter you are reading. It only talks to the Discord app on this computer.'
+                )}
+              </p>
+            </div>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={settings?.discord !== false}
+                disabled={!settings}
+                onChange={(e) =>
+                  void window.api.setSettings({ discord: e.target.checked }).then(setSettings)
+                }
+              />
+              <span className="track" aria-hidden="true" />
+              <span>{t('Show on Discord')}</span>
+            </label>
+            {settings?.discord !== false && (
+              <label className="switch">
+                <input
+                  type="checkbox"
+                  checked={settings?.discordDetails !== false}
+                  disabled={!settings}
+                  onChange={(e) =>
+                    void window.api
+                      .setSettings({ discordDetails: e.target.checked })
+                      .then(setSettings)
+                  }
+                />
+                <span className="track" aria-hidden="true" />
+                <span>{t("Show what I'm reading")}</span>
+              </label>
             )}
-          </p>
-        </div>
-        <label className="switch">
-          <input
-            type="checkbox"
-            checked={settings?.recommendations !== false}
-            disabled={!settings}
-            onChange={(e) =>
-              void window.api.setSettings({ recommendations: e.target.checked }).then(setSettings)
-            }
-          />
-          <span className="track" aria-hidden="true" />
-          <span>{t('Show recommendations')}</span>
-        </label>
-      </section>
-      <section className="setting">
-        <div className="settext">
-          <h2>{t('Daily site check')}</h2>
-          <p>
-            {t(
-              "Once a day Yomi tries every site the way you use it: its titles, a chapter list, a chapter's pages and one picture. It waits while you read. When a site breaks you get a notice and Sites says why; simple problems are fixed by themselves."
-            )}
-          </p>
-        </div>
-        <label className="switch">
-          <input
-            type="checkbox"
-            checked={settings?.siteWatch !== false}
-            disabled={!settings}
-            onChange={(e) =>
-              void window.api.setSettings({ siteWatch: e.target.checked }).then(setSettings)
-            }
-          />
-          <span className="track" aria-hidden="true" />
-          <span>{t('Check my sites every day')}</span>
-        </label>
-      </section>
-      <section className="setting">
-        <div className="settext">
-          <h2>MyAnimeList</h2>
-          <p>
-            {t(
-              "Shows a series' MyAnimeList score and rank on its page, and MyAnimeList's top lists on Discover (only the titles on your sites). To get them, Yomi sends MyAnimeList the title of the series you open (no account, nothing else). Answers are kept for a week."
-            )}
-          </p>
-        </div>
-        <label className="switch">
-          <input
-            type="checkbox"
-            checked={settings?.myanimelist !== false}
-            disabled={!settings}
-            onChange={(e) =>
-              void window.api.setSettings({ myanimelist: e.target.checked }).then(setSettings)
-            }
-          />
-          <span className="track" aria-hidden="true" />
-          <span>{t('Show MyAnimeList')}</span>
-        </label>
-      </section>
-      <section className="setting">
-        <div className="settext">
-          <h2>Discord</h2>
-          <p>
-            {t(
-              'Shows “Playing Yomi” on your Discord profile while the app is open, with the series and chapter you are reading. It only talks to the Discord app on this computer.'
-            )}
-          </p>
-        </div>
-        <label className="switch">
-          <input
-            type="checkbox"
-            checked={settings?.discord !== false}
-            disabled={!settings}
-            onChange={(e) =>
-              void window.api.setSettings({ discord: e.target.checked }).then(setSettings)
-            }
-          />
-          <span className="track" aria-hidden="true" />
-          <span>{t('Show on Discord')}</span>
-        </label>
-        {settings?.discord !== false && (
-          <label className="switch">
-            <input
-              type="checkbox"
-              checked={settings?.discordDetails !== false}
-              disabled={!settings}
-              onChange={(e) =>
-                void window.api.setSettings({ discordDetails: e.target.checked }).then(setSettings)
-              }
-            />
-            <span className="track" aria-hidden="true" />
-            <span>{t("Show what I'm reading")}</span>
-          </label>
-        )}
-      </section>
-      <TrackingSetting />
-      <MihonImportSetting />
-      <AppUpdateSetting />
+          </section>
+          <TrackingSetting />
+          <MihonImportSetting />
+          <AppUpdateSetting />
+        </>
+      )}
     </div>
   )
 }
@@ -243,7 +259,8 @@ function MihonImportSetting(): React.JSX.Element {
         {busy && prog && (
           <>
             <p className="sub">
-              {pct}% · {prog.title ? t('Looking at “{title}”', { title: prog.title }) : t('Finishing…')}
+              {pct}% ·{' '}
+              {prog.title ? t('Looking at “{title}”', { title: prog.title }) : t('Finishing…')}
             </p>
             <div className="progbar" aria-hidden="true">
               <span style={{ width: `${pct}%` }} />
@@ -495,7 +512,11 @@ function TrackingSetting(): React.JSX.Element {
           <p className="sub">
             {t(
               'Import finished: {updated} updated, {skipped} already ahead or equal, {failed} failed. Local progress never moved backward.',
-              { updated: num(imported.updated), skipped: num(imported.skipped), failed: num(imported.failed) }
+              {
+                updated: num(imported.updated),
+                skipped: num(imported.skipped),
+                failed: num(imported.failed)
+              }
             )}
           </p>
         )}
@@ -523,4 +544,3 @@ function TrackingSetting(): React.JSX.Element {
     </section>
   )
 }
-

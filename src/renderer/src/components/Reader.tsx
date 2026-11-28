@@ -1122,6 +1122,7 @@ export default function Reader({
         {!compact && (
           <button
             className="iconbtn"
+            data-desktop
             title={t('Mini reader: a small window that stays on top')}
             aria-label={t('Mini reader')}
             onClick={() => void popMini()}
@@ -1131,6 +1132,7 @@ export default function Reader({
         )}
         <button
           className="iconbtn"
+          data-desktop
           title={t('Download this chapter')}
           aria-label={t('Download this chapter')}
           onClick={() => {

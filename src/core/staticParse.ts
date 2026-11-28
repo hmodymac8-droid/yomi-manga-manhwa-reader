@@ -33,6 +33,16 @@ export function protectedChapterImages(html: string): string[] {
   }
 }
 
+/** Base64 to text, in the app (Node) and in a browser alike; '' when it isn't base64. */
+function base64Text(b64: string): string {
+  try {
+    if (typeof Buffer !== 'undefined') return Buffer.from(b64, 'base64').toString('utf8')
+    return new TextDecoder().decode(Uint8Array.from(atob(b64.replace(/\s+/g, '')), (c) => c.charCodeAt(0)))
+  } catch {
+    return ''
+  }
+}
+
 const IMG_ATTRS = ['data-src', 'data-lazy-src', 'data-original', 'data-cfsrc', 'src']
 
 function abs(href: string | undefined, base: string): string {
@@ -397,7 +407,7 @@ export function parseChapterImages(
   // read them straight from there, in order.
   const encoded: string[] = []
   $('img[data-mds]').each((_, el) => {
-    const u = Buffer.from(String($(el).attr('data-mds') ?? ''), 'base64').toString('utf8')
+    const u = base64Text(String($(el).attr('data-mds') ?? ''))
     if (/^https?:\/\//.test(u)) encoded.push(u)
   })
   if (encoded.length > 0) return { title: $('title').first().text().trim(), pages: encoded }
