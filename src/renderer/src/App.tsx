@@ -14,6 +14,7 @@ import type { MiniSession, SiteHealth, SourceInfo, UpdateStatus } from '../../pr
 import logo from './assets/yomi-logo.png'
 import { Icon } from './components/Icon'
 import { ThemeToggle } from './components/ThemeToggle'
+import { ago, num, t } from './i18n'
 
 type View =
   | { name: 'browse' }
@@ -41,9 +42,9 @@ class Boundary extends Component<{ children: ReactNode }, { error: Error | null 
     if (!this.state.error) return this.props.children
     return (
       <div className="hint">
-        <p>Something went wrong on this screen: {this.state.error.message}</p>
+        <p>{t('Something went wrong on this screen: {error}', { error: this.state.error.message })}</p>
         <button className="primary" onClick={() => window.location.reload()}>
-          Reload the app
+          {t('Reload the app')}
         </button>
       </div>
     )
@@ -65,15 +66,15 @@ function TitleBar(): React.JSX.Element {
         Yomi <span className="slash">/</span> <span className="jp">読み</span>
       </span>
       <div className="winctl">
-        <button aria-label="Minimize" onClick={() => window.api.windowControl('minimize')}>
+        <button aria-label={t('Minimize')} onClick={() => window.api.windowControl('minimize')}>
           <Icon name="minus" />
         </button>
-        <button aria-label="Maximize" onClick={() => window.api.windowControl('maximize')}>
+        <button aria-label={t('Maximize')} onClick={() => window.api.windowControl('maximize')}>
           <Icon name="square" />
         </button>
         <button
           className="close"
-          aria-label="Close"
+          aria-label={t('Close')}
           onClick={() => window.api.windowControl('close')}
         >
           <Icon name="x" />
@@ -91,27 +92,27 @@ function MiniTitleBar({ onReturn }: { onReturn: () => void }): React.JSX.Element
   return (
     <div className="minibar">
       <span className="minititle">
-        Yomi <span className="slash">/</span> mini
+        Yomi <span className="slash">/</span> {t('mini')}
       </span>
       <div className="winctl">
         <button
           className={pinned ? 'on' : ''}
-          aria-label={pinned ? 'Unpin from top' : 'Pin on top'}
-          title={pinned ? 'Stays above other windows' : 'Pin above other windows'}
+          aria-label={pinned ? t('Unpin from top') : t('Pin on top')}
+          title={pinned ? t('Stays above other windows') : t('Pin above other windows')}
           onClick={() => void window.api.miniSetPinned(!pinned).then(setPinned)}
         >
           <Icon name="pin" />
         </button>
-        <button aria-label="Open in Yomi" title="Continue in the main window" onClick={onReturn}>
+        <button aria-label={t('Open in Yomi')} title={t('Continue in the main window')} onClick={onReturn}>
           <Icon name="expand" />
         </button>
-        <button aria-label="Minimize" onClick={() => window.api.windowControl('minimize')}>
+        <button aria-label={t('Minimize')} onClick={() => window.api.windowControl('minimize')}>
           <Icon name="minus" />
         </button>
         <button
           className="close"
-          aria-label="Close mini reader"
-          title="Close the mini reader"
+          aria-label={t('Close mini reader')}
+          title={t('Close the mini reader')}
           onClick={() => window.api.windowControl('close')}
         >
           <Icon name="x" />
@@ -347,14 +348,14 @@ function AppInner({ mini }: { mini: boolean }): React.JSX.Element {
   // broken sites, as a number on the Sites tab
   const brokenSites = sources.filter((s) => levelOf(health[s.id]) === 'fail').length
   const nav: { id: View['name']; label: string; icon: string; n?: number }[] = [
-    { id: 'browse', label: 'Discover', icon: 'home' },
-    { id: 'new', label: 'New', icon: 'bell', n: newCount || undefined },
-    { id: 'following', label: 'Following', icon: 'bookmark', n: upd?.following },
-    { id: 'added', label: 'Added by me', icon: 'library', n: addedCount },
-    { id: 'downloads', label: 'Downloads', icon: 'download', n: queued || undefined },
-    { id: 'sites', label: 'Sites', icon: 'globe', n: brokenSites || undefined },
-    { id: 'stats', label: 'Stats', icon: 'chart' },
-    { id: 'settings', label: 'Settings', icon: 'settings' }
+    { id: 'browse', label: t('Discover'), icon: 'home' },
+    { id: 'new', label: t('New'), icon: 'bell', n: newCount || undefined },
+    { id: 'following', label: t('Following'), icon: 'bookmark', n: upd?.following },
+    { id: 'added', label: t('Added by me'), icon: 'library', n: addedCount },
+    { id: 'downloads', label: t('Downloads'), icon: 'download', n: queued || undefined },
+    { id: 'sites', label: t('Sites'), icon: 'globe', n: brokenSites || undefined },
+    { id: 'stats', label: t('Stats'), icon: 'chart' },
+    { id: 'settings', label: t('Settings'), icon: 'settings' }
   ]
   const totalTitles = sources.reduce((n, s) => n + s.count, 0)
 
@@ -365,31 +366,32 @@ function AppInner({ mini }: { mini: boolean }): React.JSX.Element {
         <div className="datatrouble" role="alert">
           {crash === 'oom' ? (
             <span>
-              <strong>Yomi&apos;s screen restarted because your PC ran out of memory.</strong> Close
-              some other apps (or turn Windows&apos; page file back on) to stop it happening again.
-              Your progress is saved.
+              <strong>{t("Yomi's screen restarted because your PC ran out of memory.")}</strong>{' '}
+              {t("Close some other apps (or turn Windows' page file back on) to stop it happening again.")}{' '}
+              {t('Your progress is saved.')}
             </span>
           ) : (
             <span>
-              <strong>Yomi&apos;s screen crashed and restarted</strong> ({crash}). Your progress is
-              saved.
+              <strong>{t("Yomi's screen crashed and restarted")}</strong> ({crash}).{' '}
+              {t('Your progress is saved.')}
             </span>
           )}
           {view.name === 'reader' && /^https?:/.test(view.chapter.url) && (
             <button className="mini" onClick={() => window.open(view.chapter.url)}>
-              Keep reading in your browser
+              {t('Keep reading in your browser')}
             </button>
           )}
           <button className="mini" onClick={() => setCrash(null)}>
-            OK
+            {t('OK')}
           </button>
         </div>
       )}
       {trouble && (
         <div className="datatrouble" role="alert">
-          <strong>Your library is still loading from disk.</strong> Your sites and progress are safe
-          — Yomi can&apos;t read the file this very second and is trying again. Nothing is being
-          overwritten.
+          <strong>{t('Your library is still loading from disk.')}</strong>{' '}
+          {t(
+            "Your sites and progress are safe — Yomi can't read the file this very second and is trying again. Nothing is being overwritten."
+          )}
           {why && <em> ({why})</em>}
           {report && <small className="datareport">{report}</small>}
           <button
@@ -398,7 +400,7 @@ function AppInner({ mini }: { mini: boolean }): React.JSX.Element {
               void window.api.catalogTrouble().then(setTrouble, (e) => setWhy(String(e)))
             }
           >
-            Try again now
+            {t('Try again now')}
           </button>
         </div>
       )}
@@ -408,12 +410,12 @@ function AppInner({ mini }: { mini: boolean }): React.JSX.Element {
             className="iconbtn"
             style={{ width: 'auto', padding: 0 }}
             onClick={() => setView({ name: 'browse' })}
-            aria-label="Yomi home"
+            aria-label={t('Yomi home')}
           >
             <img className="logo" src={logo} alt="Yomi" width={90} height={36} />
           </button>
           {!mini && (
-            <nav className="nav" aria-label="Main navigation">
+            <nav className="nav" aria-label={t('Main navigation')}>
               {nav.map((item) => (
                 <button
                   key={item.id}
@@ -432,8 +434,8 @@ function AppInner({ mini }: { mini: boolean }): React.JSX.Element {
             <Icon name="search" />
             <input
               ref={searchRef}
-              aria-label="Search catalog"
-              placeholder={`Search ${totalTitles.toLocaleString()} titles across all your sites…`}
+              aria-label={t('Search catalog')}
+              placeholder={t('Search {n} titles across all your sites…', { n: num(totalTitles) })}
               value={q}
               onChange={(e) => {
                 setQ(e.target.value)
@@ -444,7 +446,7 @@ function AppInner({ mini }: { mini: boolean }): React.JSX.Element {
             />
             <kbd>Ctrl K</kbd>
           </label>
-          <button className="qobtn" onClick={() => setQuick(true)} title="Quick Open: jump to any screen or series (Ctrl+P)">
+          <button className="qobtn" onClick={() => setQuick(true)} title={t('Quick Open: jump to any screen or series (Ctrl+P)')}>
             <kbd>Ctrl P</kbd>
           </button>
           <ThemeToggle />
@@ -513,7 +515,7 @@ function AppInner({ mini }: { mini: boolean }): React.JSX.Element {
             <Series
               key={view.series.entries[0]?.url ?? view.series.title}
               series={view.series}
-              backLabel={TAB_LABEL[view.from]}
+              backLabel={t(TAB_LABEL[view.from])}
               onBack={() => setView({ name: view.from } as View)}
               onRead={(chapter) => setView({ name: 'reader', series: view.series, chapter, from: view.from })}
               onOpen={(series) => setView({ name: 'series', series, from: view.from })}
@@ -548,29 +550,29 @@ function AppInner({ mini }: { mini: boolean }): React.JSX.Element {
       {update && !reading && !mini && (
         <div className="updatebar" role="status">
           <span>
-            <b>Yomi {update.version}</b> is ready. It installs when you close Yomi, or now:
+            <b>Yomi {update.version}</b> {t('is ready. It installs when you close Yomi, or now:')}
           </span>
           <button className="primary" onClick={() => void window.api.updateInstall()}>
-            Restart and update
+            {t('Restart and update')}
           </button>
           <button className="secondary" onClick={() => setUpdate(null)}>
-            Later
+            {t('Later')}
           </button>
         </div>
       )}
       {!reading && !mini && (
         <footer className="statusbar">
           <span>
-            <b>{totalTitles.toLocaleString()}</b> titles
+            <b>{num(totalTitles)}</b> {t('titles')}
           </span>
-          <span>{sources.length} sites</span>
+          <span>{t('{n} sites', { n: num(sources.length) })}</span>
           {miniOn && (
             <button
               className="more"
               onClick={() => void window.api.miniFocus()}
-              title="The mini reader is open"
+              title={t('The mini reader is open')}
             >
-              Mini reader
+              {t('Mini reader')}
             </button>
           )}
           <span>
@@ -585,23 +587,15 @@ function AppInner({ mini }: { mini: boolean }): React.JSX.Element {
             })}
             {sources.length > 5 && (
               <button className="more" onClick={() => setView({ name: 'sites' })}>
-                + {sources.length - 5} more
+                {t('+ {n} more', { n: num(sources.length - 5) })}
               </button>
             )}
           </span>
           <span className="right">
-            {upd?.lastChecked ? `Checked for new chapters ${ago(upd.lastChecked)}` : ''}
+            {upd?.lastChecked ? t('Checked for new chapters {when}', { when: ago(upd.lastChecked) }) : ''}
           </span>
         </footer>
       )}
     </div>
   )
-}
-
-function ago(t: number): string {
-  const m = Math.round((Date.now() - t) / 60000)
-  if (m < 1) return 'just now'
-  if (m < 60) return `${m} min ago`
-  const h = Math.round(m / 60)
-  return h < 24 ? `${h} h ago` : `${Math.round(h / 24)} d ago`
 }

@@ -7,6 +7,7 @@ import { OpenChapter, OpenSeries, chapterKey, chapterNumber as numberInTitle, fa
 import AniListLinkPanel from './AniListLink'
 import { SimilarRow } from './Similar'
 import { MalLine } from './Mal'
+import { num, t } from '../i18n'
 
 interface Props {
   series: OpenSeries
@@ -20,8 +21,8 @@ interface Props {
 
 type Ch = SeriesDetail['chapters'][number]
 
-const chapterNumber = (t: string): number => {
-  const m = t.match(/(\d+(?:\.\d+)?)/)
+const chapterNumber = (title: string): number => {
+  const m = title.match(/(\d+(?:\.\d+)?)/)
   return m ? Number(m[1]) : 0
 }
 const SPEED_TEXT: Record<SiteSpeed['label'], string> = {
@@ -31,11 +32,22 @@ const SPEED_TEXT: Record<SiteSpeed['label'], string> = {
   trouble: 'Having trouble',
   new: 'Not timed yet'
 }
+// with the typical chapter-open time: whole sentences, so "OK" here never takes the OK button's word
+const SPEED_TIMED: Record<Exclude<SiteSpeed['label'], 'new'>, string> = {
+  fast: 'Fast · chapters open in about {s} s',
+  ok: 'OK · chapters open in about {s} s',
+  slow: 'Slow · chapters open in about {s} s',
+  trouble: 'Having trouble · chapters open in about {s} s'
+}
 const speedTitle = (s: SiteSpeed | undefined): string =>
-  s ? SPEED_TEXT[s.label] + (s.ms !== undefined ? ` · chapters open in about ${(s.ms / 1000).toFixed(1)} s` : '') : ''
+  !s
+    ? ''
+    : s.ms !== undefined && s.label !== 'new'
+      ? t(SPEED_TIMED[s.label], { s: (s.ms / 1000).toFixed(1) })
+      : t(SPEED_TEXT[s.label])
 
 /** Like chapterNumber, but a chapter with no number sorts last instead of as chapter 0. */
-const numberOrNone = (t: string): number => numberInTitle(t) ?? -Infinity
+const numberOrNone = (title: string): number => numberInTitle(title) ?? -Infinity
 
 export default function Series({ series, onBack, onRead, onOpen, backLabel }: Props): React.JSX.Element {
   const [entryIdx, setEntryIdx] = useState(0)
@@ -217,7 +229,7 @@ export default function Series({ series, onBack, onRead, onOpen, backLabel }: Pr
       const alt = sites[0]
       if (!alt || alt.url === entry.url) return false
       switched.current = true
-      setSwitchNote(`${entry.sourceName} is down. Showing ${alt.sourceName} instead.`)
+      setSwitchNote(t('{site} is down. Showing {other} instead.', { site: entry.sourceName, other: alt.sourceName }))
       const idx = entries.findIndex((e) => e.url === alt.url)
       setEntries((prev) => (prev.some((e) => e.url === alt.url) ? prev : [...prev, alt]))
       setEntryIdx(idx >= 0 ? idx : entries.length)
@@ -352,10 +364,14 @@ export default function Series({ series, onBack, onRead, onOpen, backLabel }: Pr
   })
 
   // Oldest first, so the queue fills in reading order.
-  const downloadMany = (list: Ch[], label: string): void => {
+  const downloadMany = (list: Ch[], which: 'unread' | 'all'): void => {
     const todo = [...list].reverse().filter((c) => !['done', 'queued', 'downloading'].includes(dls[c.url]?.status ?? ''))
     if (todo.length === 0) return
-    if (todo.length > 40 && !confirm(`Download ${todo.length} chapters (${label})? This can take a while and use disk space.`)) return
+    const ask =
+      which === 'unread'
+        ? t('Download {n} chapters (unread)? This can take a while and use disk space.', { n: num(todo.length) })
+        : t('Download {n} chapters (all)? This can take a while and use disk space.', { n: num(todo.length) })
+    if (todo.length > 40 && !confirm(ask)) return
     void window.api.downloadEnqueue(todo.map(request))
   }
 
@@ -363,22 +379,22 @@ export default function Series({ series, onBack, onRead, onOpen, backLabel }: Pr
     if (offline) return null
     const d = dls[c.url]
     if (!d) return (
-      <button className="dl" title="Download for offline" onClick={() => window.api.downloadEnqueue([request(c)])}>
+      <button className="dl" title={t('Download for offline')} onClick={() => window.api.downloadEnqueue([request(c)])}>
         ⬇
       </button>
     )
     if (d.status === 'done') return (
-      <button className="dl done" title="Saved on this PC. Click to delete the download" onClick={() => window.confirm(`Delete the saved copy of "${c.title}" from this PC?`) && window.api.downloadRemove(d.id)}>
+      <button className="dl done" title={t('Saved on this PC. Click to delete the download')} onClick={() => window.confirm(t('Delete the saved copy of "{title}" from this PC?', { title: c.title })) && window.api.downloadRemove(d.id)}>
         ✓
       </button>
     )
     if (d.status === 'error') return (
-      <button className="dl bad" title={`${d.error ?? 'Failed'}. Click to retry`} onClick={() => window.api.downloadEnqueue([request(c)])}>
+      <button className="dl bad" title={t('{error}. Click to retry', { error: d.error ?? t('Failed') })} onClick={() => window.api.downloadEnqueue([request(c)])}>
         ↻
       </button>
     )
     return (
-      <button className="dl busy" title="Click to cancel" onClick={() => window.api.downloadCancel(d.id)}>
+      <button className="dl busy" title={t('Click to cancel')} onClick={() => window.api.downloadCancel(d.id)}>
         {d.status === 'queued' ? '…' : `${d.done}/${d.total || '?'}`}
       </button>
     )
@@ -395,10 +411,10 @@ export default function Series({ series, onBack, onRead, onOpen, backLabel }: Pr
     const finished = readSet.has(list[lastIdx].url)
     if (finished && lastIdx > 0) {
       resume = list[lastIdx - 1]
-      resumeNote = 'next chapter'
+      resumeNote = t('next chapter')
     } else if (!finished) {
       resume = list[lastIdx]
-      resumeNote = progress && progress.pos > 0.02 ? `${Math.round(progress.pos * 100)}% in` : ''
+      resumeNote = progress && progress.pos > 0.02 ? t('{n}% in', { n: Math.round(progress.pos * 100) }) : ''
     }
   }
   const first = list.length > 0 ? list[list.length - 1] : undefined
@@ -446,11 +462,11 @@ export default function Series({ series, onBack, onRead, onOpen, backLabel }: Pr
       <div className="pinback-wrap">
         <div className={`pinback${pinned ? ' on' : ''}`} aria-hidden={!pinned}>
           <button className="back" onClick={onBack} tabIndex={pinned ? 0 : -1}>
-            <Icon name="back" /> Back to {backLabel}
+            <Icon name="back" /> {t('Back to {screen}', { screen: t(backLabel) })}
           </button>
           <span className="pintitle">{series.title}</span>
           <button className="secondary" tabIndex={pinned ? 0 : -1} onClick={() => scrollBox.current?.scrollTo({ top: 0, behavior: 'smooth' })}>
-            ↑ Top
+            {t('↑ Top')}
           </button>
         </div>
       </div>
@@ -465,21 +481,23 @@ export default function Series({ series, onBack, onRead, onOpen, backLabel }: Pr
         </div>
         <div className="info">
           <button className="back" onClick={onBack} title="Esc">
-            <Icon name="back" /> Back to {backLabel}
+            <Icon name="back" /> {t('Back to {screen}', { screen: t(backLabel) })}
           </button>
           <Tags detail={detail} />
           <h2>{series.title}</h2>
           <MalLine title={series.title} />
           {entries.length > 1 && (
             <div className="srcs">
-              Read from:{' '}
+              {t('Read from:')}{' '}
               {entries.map((e, i) => {
                 const sp = speeds[e.sourceId]
                 return (
                   <button
                     key={e.url}
                     className={i === entryIdx ? 'on' : ''}
-                    title={speedTitle(sp) + (pinnedId === e.sourceId ? ' · opens from here first (your pick)' : '')}
+                    title={[speedTitle(sp), pinnedId === e.sourceId ? t('opens from here first (your pick)') : '']
+                      .filter(Boolean)
+                      .join(' · ')}
                     onClick={() => {
                       forced.current = true
                       switched.current = false
@@ -492,11 +510,11 @@ export default function Series({ series, onBack, onRead, onOpen, backLabel }: Pr
                     {sp && <span className={`rdot ${sp.label}`} aria-hidden="true" />}
                     {e.sourceName}
                     {(sp?.lang === 'ar' || sp?.lang === 'en') && (
-                      <small className="rlang" title={sp.lang === 'ar' ? 'Arabic' : 'English'}>
+                      <small className="rlang" title={sp.lang === 'ar' ? t('Arabic') : t('English')}>
                         {sp.lang.toUpperCase()}
                       </small>
                     )}
-                    {sp?.ms !== undefined && <small className="rspeed">{(sp.ms / 1000).toFixed(1)} s</small>}
+                    {sp?.ms !== undefined && <small className="rspeed">{t('{s} s', { s: (sp.ms / 1000).toFixed(1) })}</small>}
                     {pinnedId === e.sourceId && <small className="rstar"> ★</small>}
                   </button>
                 )
@@ -504,69 +522,72 @@ export default function Series({ series, onBack, onRead, onOpen, backLabel }: Pr
               {pinnedId && (
                 <button
                   className="prefbtn"
-                  title="Forget your pick: Yomi opens it from where you last read, else the fastest site"
+                  title={t('Forget your pick: Yomi opens it from where you last read, else the fastest site')}
                   onClick={() => {
                     setPinnedId(undefined)
                     void window.api.unpinSite(series.title)
                   }}
                 >
-                  Let Yomi choose
+                  {t('Let Yomi choose')}
                 </button>
               )}
             </div>
           )}
           {switchNote && <div className="sub">{switchNote}</div>}
-          {offline && <p className="desc">Can&apos;t reach the site, so this shows only the chapters saved on this PC.</p>}
+          {offline && <p className="desc">{t("Can't reach the site, so this shows only the chapters saved on this PC.")}</p>}
           {story && story.key === storyKey && story.text && (
             <p className="desc" dir="auto">
               {story.text}
-              {story.from && <small className="storyfrom"> · from {story.from}</small>}
+              {story.from && <small className="storyfrom"> · {t('from {site}', { site: story.from })}</small>}
             </p>
           )}
           {detail && (resume || first) && (
             <div className="resume">
               {resume ? (
                 <button className="primary" onClick={() => open(resume!)}>
-                  ▶ Continue: {resume.title}
+                  {t('▶ Continue: {chapter}', { chapter: resume.title })}
                   {resumeNote && <small> ({resumeNote})</small>}
                 </button>
               ) : (
                 first && (
                   <button className="primary" onClick={() => open(first)}>
-                    ▶ Start: {first.title}
+                    {t('▶ Start: {chapter}', { chapter: first.title })}
                   </button>
                 )
               )}
               {readSet.size > 0 && (
                 <span className="count">
-                  {[...readSet].filter((u) => list.some((c) => c.url === u)).length} / {list.length} read
+                  {t('{n} / {total} read', {
+                    n: num([...readSet].filter((u) => list.some((c) => c.url === u)).length),
+                    total: num(list.length)
+                  })}
                 </span>
               )}
             </div>
           )}
           {detail && (
             <div className="resume">
-              <button className={`mini big${follow?.following ? ' on' : ''}`} onClick={toggleFollow} title="Follow to be told about new chapters">
-                {follow?.following ? '✓ Following' : '☆ Follow'}
+              <button className={`mini big${follow?.following ? ' on' : ''}`} onClick={toggleFollow} title={t('Follow to be told about new chapters')}>
+                {follow?.following ? t('✓ Following') : t('☆ Follow')}
               </button>
               <button
                 className="mini big"
-                title="Copy a link to this series with where you are. Paste it in Discord, Telegram or WhatsApp and it shows a clickable card"
+                title={t('Copy a link to this series with where you are. Paste it in Discord, Telegram or WhatsApp and it shows a clickable card')}
                 onClick={async () => {
-                  setShareNote('Making link…')
+                  setShareNote(t('Making link…'))
                   try {
                     await navigator.clipboard.writeText(await createShareLink(shareInfo()))
-                    setShareNote('✓ Link copied. Paste it in any chat')
+                    setShareNote(t('✓ Link copied. Paste it in any chat'))
                   } catch {
-                    setShareNote("Couldn't make the link. Check your internet and try again")
+                    setShareNote(t("Couldn't make the link. Check your internet and try again"))
                   }
                   setTimeout(() => setShareNote(''), 4000)
                 }}
               >
-                ↗ Share
+                {t('↗ Share')}
               </button>
               {shareNote && <span className="count">{shareNote}</span>}
-              {follow && follow.unread > 0 && <span className="count">{follow.unread} new</span>}
+              {follow && follow.unread > 0 && <span className="count">{t('{n} new', { n: num(follow.unread) })}</span>}
             </div>
           )}
           {detail && <AniListLinkPanel seriesUrl={entry.url} title={detail.title || series.title} />}
@@ -574,10 +595,10 @@ export default function Series({ series, onBack, onRead, onOpen, backLabel }: Pr
           {detail && !offline && list.length > 0 && (
             <div className="resume">
               <button className="mini big" onClick={() => downloadMany(unread, 'unread')}>
-                ⬇ Download unread ({unread.length})
+                {t('⬇ Download unread ({n})', { n: num(unread.length) })}
               </button>
               <button className="mini big" onClick={() => downloadMany(list, 'all')}>
-                ⬇ Download all ({list.length})
+                {t('⬇ Download all ({n})', { n: num(list.length) })}
               </button>
             </div>
           )}
@@ -591,54 +612,56 @@ export default function Series({ series, onBack, onRead, onOpen, backLabel }: Pr
         <div className="error">
           {error}{' '}
           <button className="mini" onClick={() => reload('auto')}>
-            Try again
+            {t('Try again')}
           </button>
         </div>
       )}
       {detail && (
         <>
           <div className="meta">
-            {detail.chapters.length} chapters{refreshing && ' · updating…'}{' '}
+            {refreshing
+              ? t('{n} chapters · updating…', { n: num(detail.chapters.length) })
+              : t('{n} chapters', { n: num(detail.chapters.length) })}{' '}
             <button className="mini" onClick={() => setNewestFirst(!newestFirst)}>
-              {newestFirst ? 'newest first' : 'oldest first'}
+              {newestFirst ? t('newest first') : t('oldest first')}
             </button>
             {!offline && (
               <>
-                <button className="mini" disabled={refreshing} onClick={() => reload('check')} title="Look for chapters added since the list was saved">
-                  Check for new chapters
+                <button className="mini" disabled={refreshing} onClick={() => reload('check')} title={t('Look for chapters added since the list was saved')}>
+                  {t('Check for new chapters')}
                 </button>
                 <button
                   className="mini"
                   disabled={refreshing}
-                  onClick={() => confirm('Read the whole chapter list again? This takes longer and uses more of the site.') && reload('full')}
-                  title="Read the complete chapter list again"
+                  onClick={() => confirm(t('Read the whole chapter list again? This takes longer and uses more of the site.')) && reload('full')}
+                  title={t('Read the complete chapter list again')}
                 >
-                  Reload full list
+                  {t('Reload full list')}
                 </button>
               </>
             )}
           </div>
           {detail.incomplete && !refreshing && (
             <div className="error small">
-              This list looks too short for the newest chapter, so some chapters may be missing.{' '}
+              {t('This list looks too short for the newest chapter, so some chapters may be missing.')}{' '}
               <button className="mini" onClick={() => reload('full')}>
-                Reload full list
+                {t('Reload full list')}
               </button>
             </div>
           )}
           {refreshError && (
             <div className="error small">
-              Showing the saved list. Couldn&apos;t check for new chapters: {refreshError}{' '}
+              {t("Showing the saved list. Couldn't check for new chapters: {error}", { error: refreshError })}{' '}
               <button className="mini" onClick={() => reload('check')}>
-                Try again
+                {t('Try again')}
               </button>
             </div>
           )}
           {detail.chapters.length === 0 && !refreshing && (
             <div className="hint">
-              No chapters found on this page. The site may load them in a way the app can&apos;t see yet.{' '}
+              {t("No chapters found on this page. The site may load them in a way the app can't see yet.")}{' '}
               <button className="mini" onClick={() => reload('full')}>
-                Try again
+                {t('Try again')}
               </button>
             </div>
           )}
@@ -651,10 +674,13 @@ export default function Series({ series, onBack, onRead, onOpen, backLabel }: Pr
                 <button className="chapter" onClick={() => open(c)}>
                   {readSet.has(c.url) ? '✓ ' : ''}
                   {c.title}
-                  {newKeys.has(chapterKey(c.title)) && !readSet.has(c.url) && <span className="newtag">NEW</span>}
+                  {newKeys.has(chapterKey(c.title)) && !readSet.has(c.url) && <span className="newtag">{t('NEW')}</span>}
                   {c.fill && (
-                    <span className="filltag" title={`${entry.sourceName} doesn't have this chapter. It is read from ${c.fillName}.`}>
-                      from {c.fillName}
+                    <span
+                      className="filltag"
+                      title={t("{site} doesn't have this chapter. It is read from {other}.", { site: entry.sourceName, other: c.fillName ?? '' })}
+                    >
+                      {t('from {site}', { site: c.fillName ?? '' })}
                     </span>
                   )}
                 </button>
@@ -676,21 +702,21 @@ export default function Series({ series, onBack, onRead, onOpen, backLabel }: Pr
 function ChapterProgress({ site, found, expected, since }: { site: string; found: number; expected?: number; since: number }): React.JSX.Element {
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(t)
+    const timer = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(timer)
   }, [])
   const secs = Math.max(0, Math.round((now - since) / 1000))
-  const time = secs < 60 ? `${secs} s` : `${Math.floor(secs / 60)} min ${secs % 60} s`
+  const time = secs < 60 ? t('{s} s', { s: secs }) : t('{m} min {s} s', { m: Math.floor(secs / 60), s: secs % 60 })
   const pct = expected && expected > 0 ? Math.min(99, Math.round((found / expected) * 100)) : null
   return (
     <div className="chprog" role="status" aria-live="polite">
       <div className="chprog-top">
         <span>
           {found === 0
-            ? `Reading the chapter list from ${site}…`
+            ? t('Reading the chapter list from {site}…', { site })
             : expected
-              ? `Loading chapters from ${site}… ${found.toLocaleString()} of ${expected.toLocaleString()}`
-              : `Loading chapters from ${site}… ${found.toLocaleString()} found so far`}
+              ? t('Loading chapters from {site}… {n} of {total}', { site, n: num(found), total: num(expected) })
+              : t('Loading chapters from {site}… {n} found so far', { site, n: num(found) })}
         </span>
         <span className="chprog-time">
           {pct !== null ? `${pct}% · ` : ''}
@@ -702,8 +728,8 @@ function ChapterProgress({ site, found, expected, since }: { site: string; found
       </div>
       {(found > 0 || secs >= 15) && (
         <div className="chprog-note">
-          {found > 0 ? 'You can already open the chapters shown below. ' : ''}
-          {secs >= 15 ? 'Long series can take a few minutes the first time; after that they open straight away.' : ''}
+          {found > 0 ? t('You can already open the chapters shown below.') + ' ' : ''}
+          {secs >= 15 ? t('Long series can take a few minutes the first time; after that they open straight away.') : ''}
         </div>
       )}
     </div>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useRowFit } from '../useRowFit'
 import type { SearchHit } from '../../../preload/index.d'
 import { coverSrc, fallbackCover, type OpenSeries } from '../lib'
+import { num, t } from '../i18n'
 
 /** One title card (the same card as Discover). `note` replaces the site line (e.g. a MyAnimeList score). */
 export function HitCard({
@@ -31,7 +32,10 @@ export function HitCard({
         {h.title}
       </div>
       <div className="from">
-        {note ?? (h.entries.length > 1 ? `${h.entries.length} sites` : h.entries[0]?.sourceName)}
+        {note ??
+          (h.entries.length > 1
+            ? t('{n} sites', { n: num(h.entries.length) })
+            : h.entries[0]?.sourceName)}
       </div>
     </button>
   )
@@ -57,7 +61,7 @@ export function HitStrip({
         <span>{label}</span>
         {(all || hits.length > cols) && (
           <button className="mini fitmore" onClick={() => setAll(!all)}>
-            {all ? 'Show fewer' : `Show all ${hits.length}`}
+            {all ? t('Show fewer') : t('Show all {n}', { n: num(hits.length) })}
           </button>
         )}
       </div>
@@ -118,7 +122,7 @@ export function SimilarRow({
         <span className={`chev${open ? ' on' : ''}`} aria-hidden="true">
           ▸
         </span>
-        Similar on your sites <small>{hits.length}</small>
+        {t('Similar on your sites')} <small>{num(hits.length)}</small>
       </button>
       {open && (
         <div className={all ? 'simgrid' : 'simrow'}>
@@ -127,7 +131,7 @@ export function SimilarRow({
           ))}
           {hits.length > SIMILAR_FIRST && (
             <button className="simmore" onClick={() => setAllFor(all ? '' : want)}>
-              {all ? 'Show fewer' : `Show all ${hits.length}`}
+              {all ? t('Show fewer') : t('Show all {n}', { n: num(hits.length) })}
             </button>
           )}
         </div>
@@ -160,7 +164,7 @@ export function BecauseYouRead({
           key={r.title}
           label={
             <>
-              Because you read <em>{r.title}</em>
+              {t('Because you read')} <em>{r.title}</em>
             </>
           }
           hits={r.hits}

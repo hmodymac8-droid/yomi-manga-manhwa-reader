@@ -8,7 +8,8 @@ import type {
   SourceInfo,
   UpdateStatus
 } from '../../../preload/index.d'
-import { OpenChapter, OpenSeries, fallbackCover, coverSrc, timeAgo, shortSites } from '../lib'
+import { OpenChapter, OpenSeries, fallbackCover, coverSrc, shortSites } from '../lib'
+import { ago, isRtl, num, t } from '../i18n'
 import Featured from './Featured'
 import GenreProgress from './GenreProgress'
 import { Icon } from './Icon'
@@ -51,8 +52,8 @@ export default function Browse({
   const [findText, setFindText] = useState('')
   const [findQ, setFindQ] = useState('')
   useEffect(() => {
-    const t = window.setTimeout(() => setFindQ(findText.trim()), 250)
-    return () => window.clearTimeout(t)
+    const timer = window.setTimeout(() => setFindQ(findText.trim()), 250)
+    return () => window.clearTimeout(timer)
   }, [findText])
   const q = topQ.trim() ? topQ : findQ
   // The row of site chips takes a lot of room: it can be folded away (and stays that way next time).
@@ -306,11 +307,11 @@ export default function Browse({
     })
     return (
       <div className="pager">
-        <button className="pg" disabled={page === 0} onClick={() => goPage(0)} title="First page">
+        <button className="pg" disabled={page === 0} onClick={() => goPage(0)} title={t('First page')}>
           «
         </button>
         <button className="pg" disabled={page === 0} onClick={() => goPage(page - 1)}>
-          ‹ Prev
+          {t('‹ Prev')}
         </button>
         {nums.map((n, i) =>
           n === '…' ? (
@@ -324,18 +325,18 @@ export default function Browse({
           )
         )}
         <button className="pg" disabled={page >= pages - 1} onClick={() => goPage(page + 1)}>
-          Next ›
+          {t('Next ›')}
         </button>
         <button
           className="pg"
           disabled={page >= pages - 1}
           onClick={() => goPage(pages - 1)}
-          title="Last page"
+          title={t('Last page')}
         >
           »
         </button>
         <span className="goto">
-          go to{' '}
+          {t('go to')}{' '}
           <input
             type="number"
             min={1}
@@ -349,14 +350,14 @@ export default function Browse({
               }
             }}
           />{' '}
-          of {pages.toLocaleString()}
+          {t('of {n}', { n: num(pages) })}
         </span>
         <label
           className="auto"
-          title="Keep scrolling past the bottom of a page to open the next one"
+          title={t('Keep scrolling past the bottom of a page to open the next one')}
         >
           <input type="checkbox" checked={autoNext} onChange={(e) => setAuto(e.target.checked)} />{' '}
-          scroll down for next page
+          {t('scroll down for next page')}
         </label>
       </div>
     )
@@ -371,14 +372,14 @@ export default function Browse({
   const retried = useRef(0)
   useEffect(() => {
     if (sources.length > 0 || retried.current >= 15) return
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       retried.current++
       void refreshSources()
       void runSearch()
       window.api.progressRecent(12).then(setRecent)
       window.api.followList().then(setFollows)
     }, 2000)
-    return () => clearTimeout(t)
+    return () => clearTimeout(timer)
   }, [sources, refreshSources, runSearch])
 
   // Reload "Continue reading" and "New chapters" every time we come back to this screen.
@@ -430,7 +431,7 @@ export default function Browse({
       setAdded(await window.api.titleList())
       setAddUrl('')
       if (andDownload) {
-        setAddMsg('Reading the chapter list…')
+        setAddMsg(t('Reading the chapter list…'))
         const d = await window.api.getSeries(a.sourceId, a.url, 'auto')
         if (!d.ok) {
           setAddErr(d.error)
@@ -450,10 +451,17 @@ export default function Browse({
           }))
         )
         setAddMsg(
-          `Queued ${d.data.chapters.length} chapters of "${a.title}". Watch them in Downloads.`
+          t('Queued {n} chapters of "{title}". Watch them in Downloads.', {
+            n: num(d.data.chapters.length),
+            title: a.title
+          })
         )
       } else {
-        setAddMsg(`${a.already ? 'Updated' : 'Added'} "${a.title}" (${a.chapters} chapters).`)
+        setAddMsg(
+          a.already
+            ? t('Updated "{title}" ({n} chapters).', { title: a.title, n: num(a.chapters) })
+            : t('Added "{title}" ({n} chapters).', { title: a.title, n: num(a.chapters) })
+        )
       }
     } finally {
       setAddBusy(false)
@@ -463,7 +471,10 @@ export default function Browse({
   const removeAddedTitle = async (a: AddedTitle): Promise<void> => {
     if (
       !window.confirm(
-        `Remove "${a.title}" from "Added by me"?\n\nDownloaded chapters are kept (delete them in Downloads).`
+        t(
+          'Remove "{title}" from "Added by me"?\n\nDownloaded chapters are kept (delete them in Downloads).',
+          { title: a.title }
+        )
       )
     )
       return
@@ -521,9 +532,9 @@ export default function Browse({
 
   // Search whenever the query / filters / page change (typing is debounced, clicking a page is immediate).
   useEffect(() => {
-    const t = setTimeout(() => runSearch(), searchDelay.current)
+    const timer = setTimeout(() => runSearch(), searchDelay.current)
     searchDelay.current = 150
-    return () => clearTimeout(t)
+    return () => clearTimeout(timer)
   }, [runSearch])
 
   // Live crawl progress: update counts and re-run the search (throttled) so the grid fills in.
@@ -579,7 +590,7 @@ export default function Browse({
     if (!url.trim()) return
     setAdding(true)
     setAddError('')
-    setStage('Starting…')
+    setStage(t('Starting…'))
     const off = window.api.onDetect(setStage)
     const res = await window.api.addSite(url)
     off()
@@ -617,26 +628,26 @@ export default function Browse({
         <div className="pagehead">
           <div>
             <div className="kicker">私の追加</div>
-            <h1>Added by me</h1>
-            <p>Single titles you saved by pasting their page address.</p>
+            <h1>{t('Added by me')}</h1>
+            <p>{t('Single titles you saved by pasting their page address.')}</p>
           </div>
           <div className="pageact">
             <span>
-              <b>{added.length}</b> {added.length === 1 ? 'title' : 'titles'}
+              <b>{num(added.length)}</b> {added.length === 1 ? t('title') : t('titles')}
             </span>
           </div>
         </div>
       ) : (
         <div className="pagehead">
           <div>
-            <div className="eyebrow">Your combined catalog</div>
-            <h1>Discover</h1>
-            <p>One quiet place for every series you follow.</p>
+            <div className="eyebrow">{t('Your combined catalog')}</div>
+            <h1>{t('Discover')}</h1>
+            <p>{t('One quiet place for every series you follow.')}</p>
           </div>
           <div className="pageact">
             <span>
-              <b>{sources.reduce((n, x) => n + x.count, 0).toLocaleString()}</b> titles ·{' '}
-              {sources.length} sites
+              <b>{num(sources.reduce((n, x) => n + x.count, 0))}</b> {t('titles')} ·{' '}
+              {sources.length === 1 ? t('1 site') : t('{n} sites', { n: num(sources.length) })}
             </span>
           </div>
         </div>
@@ -646,7 +657,8 @@ export default function Browse({
         <>
           <div className="addsite">
             <p>
-              <b>Add a site</b> — paste any manga site&apos;s address and it joins your catalog.
+              <b>{t('Add a site')}</b> —{' '}
+              {t("paste any manga site's address and it joins your catalog.")}
             </p>
             <span className="add">
               <input
@@ -656,7 +668,7 @@ export default function Browse({
                 onKeyDown={(e) => e.key === 'Enter' && addSite()}
               />
               <button onClick={() => void addSite()} disabled={adding}>
-                {adding ? 'Detecting…' : '+ Add'}
+                {adding ? t('Detecting…') : t('+ Add')}
               </button>
             </span>
           </div>
@@ -664,13 +676,15 @@ export default function Browse({
             <div className="sitedir">
               <div className="sitedirhead">
                 <div>
-                  <b>Popular sites</b>
+                  <b>{t('Popular sites')}</b>
                   <span>
-                    {ready.length} sites tested with Yomi — click one to add it to your catalog.
+                    {t('{n} sites tested with Yomi — click one to add it to your catalog.', {
+                      n: num(ready.length)
+                    })}
                   </span>
                 </div>
                 <button className="mini" onClick={toggleDir}>
-                  {dirOpen ? 'Hide' : 'Show'}
+                  {dirOpen ? t('Hide') : t('Show')}
                 </button>
               </div>
               {dirOpen &&
@@ -697,7 +711,7 @@ export default function Browse({
                 })}
               {dirOpen && dirMore && (
                 <button className="mini sitedirmore" onClick={() => setDirAll(!dirAll)}>
-                  {dirAll ? 'Show fewer' : `Show all ${ready.length}`}
+                  {dirAll ? t('Show fewer') : t('Show all {n}', { n: num(ready.length) })}
                 </button>
               )}
             </div>
@@ -706,14 +720,14 @@ export default function Browse({
             <button
               className="mini big"
               onClick={toggleSites}
-              title={sitesOpen ? 'Hide the site list' : 'Show the site list'}
+              title={sitesOpen ? t('Hide the site list') : t('Show the site list')}
             >
-              {sitesOpen || sources.length === 0 ? '▾' : '▸'} {sources.length}{' '}
-              {sources.length === 1 ? 'site' : 'sites'}
+              {sitesOpen || sources.length === 0 ? '▾' : isRtl() ? '◂' : '▸'}{' '}
+              {sources.length === 1 ? t('1 site') : t('{n} sites', { n: num(sources.length) })}
             </button>
             <span className="sub">
-              {sources.reduce((n, x) => n + x.count, 0).toLocaleString()} titles
-              {sources.some((x) => x.crawling) && ' · scanning…'}
+              {t('{n} titles', { n: num(sources.reduce((n, x) => n + x.count, 0)) })}
+              {sources.some((x) => x.crawling) && ` · ${t('scanning…')}`}
             </span>
           </div>
           <div
@@ -725,23 +739,23 @@ export default function Browse({
               const busy = s.crawling && !(p && p.done)
               return (
                 <span key={s.id} className="chip">
-                  <b>{s.name}</b> {s.count.toLocaleString()}
-                  {busy && <em> · scanning page {p?.pages ?? 1}…</em>}
+                  <b>{s.name}</b> {num(s.count)}
+                  {busy && <em> · {t('scanning page {n}…', { n: num(p?.pages ?? 1) })}</em>}
                   {p?.done && p.error && <em className="bad"> · {p.error}</em>}
                   {busy ? (
                     <button className="mini" onClick={() => window.api.cancelCrawl(s.id)}>
-                      stop
+                      {t('stop')}
                     </button>
                   ) : (
                     <>
                       <button
                         className="mini"
-                        title="Fetch new titles"
+                        title={t('Fetch new titles')}
                         onClick={() => window.api.crawl(s.id)}
                       >
-                        refresh
+                        {t('refresh')}
                       </button>
-                      <button className="mini" title="Delete site" onClick={() => setDeleting(s)}>
+                      <button className="mini" title={t('Delete site')} onClick={() => setDeleting(s)}>
                         ✕
                       </button>
                     </>
@@ -763,28 +777,30 @@ export default function Browse({
           {sources.length > 0 && upd && (
             <div className="updbar">
               <span>
-                Following {upd.following} series ·{' '}
+                {t('Following {n} series', { n: num(upd.following) })} ·{' '}
                 {upd.checking
-                  ? 'checking for new chapters…'
-                  : `checked ${timeAgo(upd.lastChecked)}`}
+                  ? t('checking for new chapters…')
+                  : upd.lastChecked
+                    ? t('checked {ago}', { ago: ago(upd.lastChecked) })
+                    : t('not checked yet')}
               </span>
               <button
                 className="mini"
                 disabled={upd.checking}
                 onClick={() => window.api.updatesCheck()}
               >
-                check now
+                {t('check now')}
               </button>
               <label
                 className="auto"
-                title="Download new chapters of the series you follow as soon as they appear"
+                title={t('Download new chapters of the series you follow as soon as they appear')}
               >
                 <input
                   type="checkbox"
                   checked={upd.autoDownload}
                   onChange={(e) => window.api.updatesSetAutoDownload(e.target.checked)}
                 />{' '}
-                auto-download new chapters
+                {t('auto-download new chapters')}
               </label>
             </div>
           )}
@@ -793,8 +809,9 @@ export default function Browse({
 
       {sources.length === 0 ? (
         <div className="hint">
-          Paste a manga site URL above (for example the site&apos;s home page) and I&apos;ll list
-          every series on it.
+          {t(
+            "Paste a manga site URL above (for example the site's home page) and I'll list every series on it."
+          )}
         </div>
       ) : (
         <>
@@ -804,27 +821,28 @@ export default function Browse({
                 <div className="kicker" style={{ color: 'var(--primary-text)' }}>
                   <Icon name="link" />
                 </div>
-                <h3>Save a single title</h3>
+                <h3>{t('Save a single title')}</h3>
                 <p>
-                  Paste the address of a title&apos;s page from any site. It is saved here and opens
-                  like any other series.
+                  {t(
+                    "Paste the address of a title's page from any site. It is saved here and opens like any other series."
+                  )}
                 </p>
                 <span className="add">
                   <input
-                    placeholder="https://… the address of one title"
+                    placeholder={t('https://… the address of one title')}
                     value={addUrl}
                     onChange={(e) => setAddUrl(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && void addTitle(false)}
                   />
                   <button onClick={() => void addTitle(false)} disabled={addBusy || !addUrl.trim()}>
-                    {addBusy ? 'Reading…' : 'Add title'}
+                    {addBusy ? t('Reading…') : t('Add title')}
                   </button>
                   <button
                     onClick={() => void addTitle(true)}
                     disabled={addBusy || !addUrl.trim()}
-                    title="Add it and queue every chapter for download"
+                    title={t('Add it and queue every chapter for download')}
                   >
-                    Add + download all
+                    {t('Add + download all')}
                   </button>
                 </span>
               </div>
@@ -832,7 +850,7 @@ export default function Browse({
               {addMsg && <div className="stage">{addMsg}</div>}
               {added.length === 0 && (
                 <div className="hint">
-                  Nothing here yet. Paste the address of one title above and it is saved here.
+                  {t('Nothing here yet. Paste the address of one title above and it is saved here.')}
                 </div>
               )}
               <div className="grid">
@@ -872,7 +890,7 @@ export default function Browse({
                       </button>
                       <button
                         className="cremove"
-                        title="Remove from Added by me"
+                        title={t('Remove from Added by me')}
                         onClick={() => void removeAddedTitle(a)}
                       >
                         ×
@@ -895,10 +913,10 @@ export default function Browse({
               {recentL.length > 0 && !topQ.trim() && (
                 <section className="continue">
                   <div className="meta fithead">
-                    <span>Continue reading</span>
+                    <span>{t('Continue reading')}</span>
                     {(recentAll || recentL.length > recentCols) && (
                       <button className="mini fitmore" onClick={() => setRecentAll(!recentAll)}>
-                        {recentAll ? 'Show fewer' : `Show all ${recentL.length}`}
+                        {recentAll ? t('Show fewer') : t('Show all {n}', { n: num(recentL.length) })}
                       </button>
                     )}
                   </div>
@@ -932,7 +950,7 @@ export default function Browse({
                         </button>
                         <button
                           className="cremove"
-                          title="Remove from Continue reading"
+                          title={t('Remove from Continue reading')}
                           onClick={() => {
                             setRecent((list) => list.filter((x) => x.seriesUrl !== r.seriesUrl))
                             window.api.progressHide(r.seriesUrl)
@@ -948,7 +966,7 @@ export default function Browse({
               {withNew.length > 0 && !topQ.trim() && (
                 <section className="newslim">
                   <div className="newslimhead">
-                    New chapters <small>{withNew.length}</small>
+                    {t('New chapters')} <small>{num(withNew.length)}</small>
                   </div>
                   <div className="newchips">
                     {withNew.map((f) => (
@@ -968,7 +986,7 @@ export default function Browse({
                         </button>
                         <button
                           className="x"
-                          title="Dismiss"
+                          title={t('Dismiss')}
                           onClick={() =>
                             window.api
                               .followDismiss(f.seriesUrl)
@@ -987,11 +1005,15 @@ export default function Browse({
               <div className="sechead gridtop" ref={gridTop}>
                 <div>
                   <div className="eyebrow">
-                    {total.toLocaleString()} titles
-                    {pages > 1 &&
-                      ` · page ${(page + 1).toLocaleString()} of ${pages.toLocaleString()}`}
+                    {pages > 1
+                      ? t('{n} titles · page {p} of {pages}', {
+                          n: num(total),
+                          p: num(page + 1),
+                          pages: num(pages)
+                        })
+                      : t('{n} titles', { n: num(total) })}
                   </div>
-                  <h2>{q.trim() ? `Results for “${q.trim()}”` : 'All titles'}</h2>
+                  <h2>{q.trim() ? t('Results for “{q}”', { q: q.trim() }) : t('All titles')}</h2>
                   <div className="gridfind">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                       <circle cx="11" cy="11" r="7" />
@@ -1004,15 +1026,15 @@ export default function Browse({
                       onKeyDown={(e) => {
                         if (e.key === 'Escape') setFindText('')
                       }}
-                      placeholder={`Search ${lang === 'ar' ? 'Arabic sites' : lang === 'en' ? 'English sites' : 'these titles'}${kind ? ' · ' + kind : ''}${genre ? ' · ' + genre : ''}…`}
-                      aria-label="Search in these titles"
+                      placeholder={`${lang === 'ar' ? t('Search Arabic sites') : lang === 'en' ? t('Search English sites') : t('Search these titles')}${kind ? ' · ' + t(kind) : ''}${genre ? ' · ' + t(genre) : ''}…`}
+                      aria-label={t('Search in these titles')}
                       spellCheck={false}
                     />
                     {findText && !topQ.trim() && (
                       <button
                         className="mini"
                         onClick={() => setFindText('')}
-                        aria-label="Clear the search"
+                        aria-label={t('Clear the search')}
                       >
                         ×
                       </button>
@@ -1022,7 +1044,7 @@ export default function Browse({
                 <div className="secact">
                   {/* which sites' language to browse (only when you have both English and Arabic sites) */}
                   {sources.some((x) => x.lang === 'ar') && sources.some((x) => x.lang !== 'ar') && (
-                    <div className="langtabs" role="tablist" aria-label="Language of the sites">
+                    <div className="langtabs" role="tablist" aria-label={t('Language of the sites')}>
                       {(
                         [
                           ['', 'All sites', sources.length],
@@ -1037,8 +1059,8 @@ export default function Browse({
                           className={lang === v ? 'on' : ''}
                           onClick={() => setLang(v)}
                         >
-                          <span lang={v === 'ar' ? 'ar' : undefined}>{label}</span>
-                          <span className="n">{n}</span>
+                          <span lang={v === 'ar' ? 'ar' : undefined}>{t(label)}</span>
+                          <span className="n">{num(n)}</span>
                         </button>
                       ))}
                     </div>
@@ -1051,12 +1073,15 @@ export default function Browse({
                         onClick={() => setKind(k)}
                         title={
                           k
-                            ? `Titles whose page says they are ${k} (more appear as series are opened)`
-                            : 'Every title'
+                            ? t(
+                                'Titles whose page says they are {kind} (more appear as series are opened)',
+                                { kind: t(k) }
+                              )
+                            : t('Every title')
                         }
                       >
-                        {k ? k.charAt(0).toUpperCase() + k.slice(1) : 'All'}
-                        {k && counts ? <span>{counts[k].toLocaleString()}</span> : null}
+                        {t(k ? k.charAt(0).toUpperCase() + k.slice(1) : 'All')}
+                        {k && counts ? <span>{num(counts[k])}</span> : null}
                       </button>
                     ))}
                   </div>
@@ -1064,11 +1089,14 @@ export default function Browse({
                     <button
                       className="pickbtn"
                       onClick={() => setPickerOpen((o) => !o)}
-                      title="Choose which sites to search"
+                      title={t('Choose which sites to search')}
                     >
                       {pickedIds.length === 0 || pickedIds.length === sources.length
-                        ? `All sites (${sources.length})`
-                        : `${pickedIds.length} of ${sources.length} sites`}{' '}
+                        ? t('All sites ({n})', { n: num(sources.length) })
+                        : t('{n} of {total} sites', {
+                            n: num(pickedIds.length),
+                            total: num(sources.length)
+                          })}{' '}
                       ▾
                     </button>
                     {pickerOpen && (
@@ -1077,9 +1105,9 @@ export default function Browse({
                         <div className="pickmenu">
                           <div className="pickhead">
                             <button className="mini" onClick={() => choose(null)}>
-                              all
+                              {t('all')}
                             </button>
-                            <span>tick the sites to search</span>
+                            <span>{t('tick the sites to search')}</span>
                           </div>
                           {sources.map((s) => {
                             const on = pickedIds.length === 0 || pickedIds.includes(s.id)
@@ -1102,18 +1130,18 @@ export default function Browse({
                                       choose(next.length === sources.length ? null : next)
                                     }}
                                   />{' '}
-                                  {s.name} <em>{s.count.toLocaleString()}</em>
+                                  {s.name} <em>{num(s.count)}</em>
                                   {s.lang === 'ar' && <em className="langtag">عربي</em>}
                                 </label>
                                 <button
                                   className="mini"
-                                  title="Search only this site"
+                                  title={t('Search only this site')}
                                   onClick={() => {
                                     choose([s.id])
                                     setPickerOpen(false)
                                   }}
                                 >
-                                  only
+                                  {t('only')}
                                 </button>
                               </div>
                             )
@@ -1126,20 +1154,20 @@ export default function Browse({
                     className="genresel"
                     value={genre}
                     onChange={(e) => setGenre(e.target.value)}
-                    title="Genres come from the series pages the app has read so far"
+                    title={t('Genres come from the series pages the app has read so far')}
                   >
-                    <option value="">All genres</option>
+                    <option value="">{t('All genres')}</option>
                     <option value="__none__">
-                      No genres yet ({noGenre.toLocaleString()}): open them to load
+                      {t('No genres yet ({n}): open them to load', { n: num(noGenre) })}
                     </option>
                     {genre &&
                       genre !== '__none__' &&
                       !genreList.some((x) => x.name.toLowerCase() === genre.toLowerCase()) && (
-                        <option value={genre}>{genre}</option>
+                        <option value={genre}>{t(genre)}</option>
                       )}
                     {genreList.map((x) => (
                       <option key={x.name} value={x.name}>
-                        {x.name} ({x.count.toLocaleString()})
+                        {t(x.name)} ({num(x.count)})
                       </option>
                     ))}
                   </select>
@@ -1150,19 +1178,20 @@ export default function Browse({
                     }
                   >
                     <option value="site">
-                      {sourceIds.length === 1 || sources.length === 1 ? 'Site order' : 'Mixed'}
+                      {sourceIds.length === 1 || sources.length === 1 ? t('Site order') : t('Mixed')}
                     </option>
-                    <option value="sites">On most sites</option>
-                    <option value="genre">By genre</option>
-                    <option value="az">A – Z</option>
-                    <option value="za">Z – A</option>
+                    <option value="sites">{t('On most sites')}</option>
+                    <option value="genre">{t('By genre')}</option>
+                    <option value="az">{t('A – Z')}</option>
+                    <option value="za">{t('Z – A')}</option>
                   </select>
                 </div>
               </div>
               {genre === '__none__' && (
                 <div className="nogenre-note">
-                  These titles&apos; genres aren&apos;t known yet. Open one and its genres load
-                  straight away; the background scan fills in the rest site by site.
+                  {t(
+                    "These titles' genres aren't known yet. Open one and its genres load straight away; the background scan fills in the rest site by site."
+                  )}
                 </div>
               )}
               {pager()}
@@ -1200,11 +1229,11 @@ export default function Browse({
               {page < pages - 1 && (
                 <div className="nextbar">
                   <button className="nextpage" onClick={() => goPage(page + 1)}>
-                    Next page ›
+                    {t('Next page ›')}
                   </button>
                   {autoNext && (
                     <div className="hint2">
-                      or keep scrolling down
+                      {t('or keep scrolling down')}
                       <span className="pullbar">
                         <span style={{ width: `${pull * 100}%` }} />
                       </span>

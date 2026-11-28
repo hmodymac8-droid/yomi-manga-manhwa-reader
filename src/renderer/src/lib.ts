@@ -1,3 +1,5 @@
+import { ago, num, t } from './i18n'
+
 /** Wraps a remote image URL so the main process fetches it with the right Referer. */
 export function proxied(img: string, referer: string): string {
   return `mr-img://img/?u=${encodeURIComponent(img)}&r=${encodeURIComponent(referer)}`
@@ -11,13 +13,9 @@ export function coverSrc(img: string, referer: string): string {
   return proxied(img, referer) + '&c=1'
 }
 
+/** "5 min ago" in the window's language ("never" for no time at all). */
 export function timeAgo(ms: number): string {
-  if (!ms) return 'never'
-  const s = Math.max(0, (Date.now() - ms) / 1000)
-  if (s < 60) return 'just now'
-  if (s < 3600) return `${Math.floor(s / 60)} min ago`
-  if (s < 86400) return `${Math.floor(s / 3600)} h ago`
-  return `${Math.floor(s / 86400)} d ago`
+  return ms ? ago(ms) : t('never')
 }
 
 /** Same identity the main process uses to tell chapters apart (title, since links can change provider). */
@@ -73,10 +71,10 @@ export interface OpenChapter {
 
 /** The chapter number in a chapter's name ("Chapter 12.5", "Ch. 7", "Episode 3", "الفصل 40"), or null if it has none. */
 export function chapterNumber(title: string): number | null {
-  const t = title.replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
+  const s = title.replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
   const m =
-    t.match(/(?:chapter|chap|ch|episode|ep|الفصل|فصل|الحلقة)\s*\.?\s*#?\s*(\d+(?:\.\d+)?)/i) ??
-    t.match(/(\d+(?:\.\d+)?)(?!.*\d)/)
+    s.match(/(?:chapter|chap|ch|episode|ep|الفصل|فصل|الحلقة)\s*\.?\s*#?\s*(\d+(?:\.\d+)?)/i) ??
+    s.match(/(\d+(?:\.\d+)?)(?!.*\d)/)
   return m ? Number(m[1]) : null
 }
 
@@ -124,5 +122,5 @@ export async function readerFor(
 /** A title's sites in a card: the first few, then "+ N more" (the whole list is in the tooltip). */
 export function shortSites(names: string[], max = 4): string {
   if (names.length <= max + 1) return names.join(' · ')
-  return `${names.slice(0, max).join(' · ')} + ${names.length - max} more`
+  return t('{sites} + {n} more', { sites: names.slice(0, max).join(' · '), n: num(names.length - max) })
 }

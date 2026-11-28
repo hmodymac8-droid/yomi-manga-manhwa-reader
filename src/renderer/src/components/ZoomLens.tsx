@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { t } from '../i18n'
 
 const MIN = 1.2
 const MAX = 5
@@ -104,14 +105,14 @@ export default function ZoomLens({
   const out = (m: number): void => setMag(Math.max(MIN, Math.min(MAX, m)))
   const panel = (
     <div className="zlctl">
-      <button onClick={() => out(mag / 1.2)} disabled={mag <= MIN} title="Zoom out (-)">
+      <button onClick={() => out(mag / 1.2)} disabled={mag <= MIN} title={t('Zoom out (-)')}>
         −
       </button>
       <b>{Math.round(mag * 100)}%</b>
-      <button onClick={() => out(mag * 1.2)} disabled={mag >= MAX} title="Zoom in (+)">
+      <button onClick={() => out(mag * 1.2)} disabled={mag >= MAX} title={t('Zoom in (+)')}>
         +
       </button>
-      <button onClick={onClose} title="Close (Esc)">
+      <button onClick={onClose} title={t('Close (Esc)')}>
         ✕
       </button>
     </div>

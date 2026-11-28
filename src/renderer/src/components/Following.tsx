@@ -6,6 +6,7 @@ import type {
   SourceInfo
 } from '../../../preload/index.d'
 import { OpenChapter, OpenSeries, continueChapter, coverSrc, readerFor, timeAgo } from '../lib'
+import { num, t } from '../i18n'
 
 interface Props {
   onBack: () => void
@@ -113,7 +114,7 @@ export default function Following({ onOpen, onRead }: Props): React.JSX.Element 
     )
     setOpening('')
     if (c) onRead(seriesOf(f), c)
-    else setOpenError(`Couldn't open ${f.title} right now. Open it from its page instead.`)
+    else setOpenError(t("Couldn't open {title} right now. Open it from its page instead.", { title: f.title }))
   }
 
   const unfollow = async (f: FollowInfo): Promise<void> => {
@@ -170,9 +171,11 @@ export default function Following({ onOpen, onRead }: Props): React.JSX.Element 
       <div className="pagehead">
         <div>
           <div className="kicker">追跡中</div>
-          <h1>Following</h1>
+          <h1>{t('Following')}</h1>
           <p>
-            {list.length} series{withNew > 0 && ` · ${withNew} with new chapters`}
+            {withNew > 0
+              ? t('{n} series · {m} with new chapters', { n: num(list.length), m: num(withNew) })
+              : t('{n} series', { n: num(list.length) })}
           </p>
         </div>
       </div>
@@ -181,18 +184,18 @@ export default function Following({ onOpen, onRead }: Props): React.JSX.Element 
         <>
           <div className="shelftabs">
             <button className={tab === 'all' ? 'on' : ''} onClick={() => setTab('all')}>
-              All <span>{counts.all}</span>
+              {t('All')} <span>{num(counts.all)}</span>
             </button>
             {SHELVES.map((s) => (
               <button key={s.id} className={tab === s.id ? 'on' : ''} onClick={() => setTab(s.id)}>
-                {s.label} <span>{counts[s.id]}</span>
+                {t(s.label)} <span>{num(counts[s.id])}</span>
               </button>
             ))}
           </div>
           <div className="shelftools">
             <input
               className="search"
-              placeholder="Search what you follow…"
+              placeholder={t('Search what you follow…')}
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
@@ -202,17 +205,17 @@ export default function Following({ onOpen, onRead }: Props): React.JSX.Element 
                 checked={newOnly}
                 onChange={(e) => setNewOnly(e.target.checked)}
               />{' '}
-              New chapters only
+              {t('New chapters only')}
             </label>
             <select
               className="sortpick"
               value={sort}
               onChange={(e) => pickSort(e.target.value as Sort)}
-              aria-label="Sort"
+              aria-label={t('Sort')}
             >
               {SORTS.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.label}
+                  {t(s.label)}
                 </option>
               ))}
             </select>
@@ -223,12 +226,13 @@ export default function Following({ onOpen, onRead }: Props): React.JSX.Element 
 
       {loaded && list.length === 0 && (
         <div className="hint">
-          You aren&apos;t following anything yet. Press ☆ Follow on a series, or just read a
-          chapter: reading a series follows it, and the app tells you when it gets new chapters.
+          {t(
+            "You aren't following anything yet. Press ☆ Follow on a series, or just read a chapter: reading a series follows it, and the app tells you when it gets new chapters."
+          )}
         </div>
       )}
       {loaded && list.length > 0 && shown.length === 0 && (
-        <div className="hint">Nothing here with these filters.</div>
+        <div className="hint">{t('Nothing here with these filters.')}</div>
       )}
       <div className="grid">
         {shown.map((f) => (
@@ -240,15 +244,18 @@ export default function Following({ onOpen, onRead }: Props): React.JSX.Element 
                 ) : (
                   <div className="ph">{f.title.trim().slice(0, 1).toUpperCase()}</div>
                 )}
-                {f.unread > 0 && <span className="badge">+{f.unread} new</span>}
+                {f.unread > 0 && <span className="badge">{t('+{n} new', { n: num(f.unread) })}</span>}
               </div>
               <div className="name" title={f.title}>
                 {f.title}
               </div>
               <div className="from">
                 {prog[f.seriesUrl]
-                  ? `Read up to ${prog[f.seriesUrl].chapterTitle.replace(/^chapters*/i, 'Ch. ')} · ${timeAgo(prog[f.seriesUrl].updatedAt)}`
-                  : `${sources.find((s) => s.id === f.sourceId)?.name ?? f.sourceId} · not started`}
+                  ? t('Read up to {chapter} · {when}', {
+                      chapter: prog[f.seriesUrl].chapterTitle.replace(/^chapters*/i, 'Ch. '),
+                      when: timeAgo(prog[f.seriesUrl].updatedAt)
+                    })
+                  : t('{site} · not started', { site: sources.find((s) => s.id === f.sourceId)?.name ?? f.sourceId })}
               </div>
             </button>
             <button
@@ -257,35 +264,35 @@ export default function Following({ onOpen, onRead }: Props): React.JSX.Element 
               onClick={() => void carryOn(f)}
             >
               {opening === f.seriesUrl
-                ? 'Opening…'
+                ? t('Opening…')
                 : prog[f.seriesUrl]
-                  ? 'Continue'
-                  : 'Start reading'}
+                  ? t('Continue')
+                  : t('Start reading')}
             </button>
             <select
               className="shelfpick"
               value={shelfOf(f)}
-              title="Move to another shelf"
+              title={t('Move to another shelf')}
               onChange={(e) => void move(f, e.target.value as FollowCategory)}
             >
               {SHELVES.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.label}
+                  {t(s.label)}
                 </option>
               ))}
             </select>
             <label
               className="autodl"
-              title="Download new chapters of this series as soon as they come out"
+              title={t('Download new chapters of this series as soon as they come out')}
             >
               <input
                 type="checkbox"
                 checked={f.autoDownload ?? autoAll}
                 onChange={(e) => setAuto(f, e.target.checked)}
               />
-              Auto-download
+              {t('Auto-download')}
             </label>
-            <button className="x" title="Unfollow" onClick={() => unfollow(f)}>
+            <button className="x" title={t('Unfollow')} onClick={() => unfollow(f)}>
               ✕
             </button>
           </div>

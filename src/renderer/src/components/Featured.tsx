@@ -3,6 +3,7 @@ import type { FollowInfo, ProgressRecord, SeriesDetail, SourceInfo } from '../..
 import { OpenChapter, OpenSeries, coverSrc } from '../lib'
 import { Icon } from './Icon'
 import { Tags } from './Tags'
+import { num, t } from '../i18n'
 
 interface Pick {
   seriesUrl: string
@@ -48,7 +49,7 @@ export default function Featured({ recent, follows, sources, onOpen, onRead }: P
           title: r.title,
           cover: r.cover,
           coverReferer: r.coverReferer,
-          eyebrow: `Continue · ${r.chapterTitle}`,
+          eyebrow: t('Continue · {chapter}', { chapter: r.chapterTitle }),
           chapterUrl: r.chapterUrl
         })
       }
@@ -61,7 +62,7 @@ export default function Featured({ recent, follows, sources, onOpen, onRead }: P
           title: f.title,
           cover: f.cover,
           coverReferer: f.coverReferer,
-          eyebrow: f.unread > 0 ? `Following · ${f.unread} new` : 'Following'
+          eyebrow: f.unread > 0 ? t('Following · {n} new', { n: num(f.unread) }) : t('Following')
         })
       }
       const out: Pick[] = []
@@ -107,7 +108,7 @@ export default function Featured({ recent, follows, sources, onOpen, onRead }: P
 
   return (
     <section className="featured">
-      <button className="fcover" onClick={() => onOpen(series)} aria-label={`Open ${p.title}`}>
+      <button className="fcover" onClick={() => onOpen(series)} aria-label={t('Open {title}', { title: p.title })}>
         {series.cover && <img src={coverSrc(series.cover, p.coverReferer)} alt="" width={140} height={196} decoding="async" />}
       </button>
       <div className="fbody">
@@ -117,10 +118,10 @@ export default function Featured({ recent, follows, sources, onOpen, onRead }: P
         <p className="fdesc" dir="auto">{p.detail.description}</p>
         <div className="factions">
           <button className="primary withicon" onClick={read}>
-            <Icon name="play" /> Read now
+            <Icon name="play" /> {t('Read now')}
           </button>
           <button className="secondary withicon" onClick={() => onOpen(series)}>
-            <Icon name="bookmark" /> Details
+            <Icon name="bookmark" /> {t('Details')}
           </button>
         </div>
       </div>

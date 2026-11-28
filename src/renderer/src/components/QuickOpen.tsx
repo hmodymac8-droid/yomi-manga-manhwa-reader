@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FollowInfo, ProgressRecord, SearchHit, SourceInfo } from '../../../preload/index.d'
 import type { OpenSeries } from '../lib'
 import { Icon } from './Icon'
+import { num, t } from '../i18n'
 
 /*
  * Quick Open (Ctrl+P): type a few letters to jump to a screen, a series you follow or are reading, or any title on
@@ -22,7 +23,12 @@ interface Item {
   run: () => void
 }
 
-const norm = (s: string): string => s.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '')
+// (accents and Arabic vowel marks are ignored, so المتابعة finds المتابَعة)
+const norm = (s: string): string =>
+  s
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[̀-ًͯ-ٰٟ]/g, '')
 
 export default function QuickOpen({
   screens,
@@ -89,7 +95,7 @@ export default function QuickOpen({
           key: 's:' + s.id,
           icon: s.icon,
           label: s.label,
-          sub: 'Screen',
+          sub: t('Screen'),
           run: () => onScreen(s.id)
         })
     const seen = new Set<string>()
@@ -100,7 +106,10 @@ export default function QuickOpen({
         key: 'r:' + r.seriesUrl,
         icon: 'play',
         label: r.title,
-        sub: `Continue · ${r.chapterTitle || 'reading'} · ${siteName(r.sourceId)}`,
+        sub: t('Continue · {chapter} · {site}', {
+          chapter: r.chapterTitle || t('reading'),
+          site: siteName(r.sourceId)
+        }),
         run: () => onSeries(one(r))
       })
     }
@@ -111,7 +120,9 @@ export default function QuickOpen({
         key: 'f:' + f.seriesUrl,
         icon: 'bookmark',
         label: f.title,
-        sub: `Following${f.unread ? ` · ${f.unread} new` : ''} · ${siteName(f.sourceId)}`,
+        sub: f.unread
+          ? t('Following · {n} new · {site}', { n: num(f.unread), site: siteName(f.sourceId) })
+          : t('Following · {site}', { site: siteName(f.sourceId) }),
         run: () => onSeries(one(f))
       })
     }
@@ -124,7 +135,7 @@ export default function QuickOpen({
           label: h.title,
           sub:
             h.entries.length > 1
-              ? `On ${h.entries.length} sites`
+              ? t('On {n} sites', { n: num(h.entries.length) })
               : (h.entries[0]?.sourceName ?? ''),
           run: () => onSeries(h)
         })
@@ -151,7 +162,7 @@ export default function QuickOpen({
       <div
         className="qo"
         role="dialog"
-        aria-label="Quick open"
+        aria-label={t('Quick open')}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <label className="qo-field">
@@ -159,7 +170,7 @@ export default function QuickOpen({
           <input
             ref={input}
             value={q}
-            placeholder="Go to a screen, a series you read, or any title…"
+            placeholder={t('Go to a screen, a series you read, or any title…')}
             onChange={(e) => {
               setQ(e.target.value)
               setSel(0)
@@ -183,7 +194,7 @@ export default function QuickOpen({
         <div className="qo-list" ref={list}>
           {items.length === 0 && (
             <div className="qo-empty">
-              {q.trim().length < 2 ? 'Type to search' : 'Nothing found'}
+              {q.trim().length < 2 ? t('Type to search') : t('Nothing found')}
             </div>
           )}
           {items.map((it, i) => (
