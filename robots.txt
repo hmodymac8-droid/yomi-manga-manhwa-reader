@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://hmodymac8-droid.github.io/yomi-manga-manhwa-reader/sitemap.xml
