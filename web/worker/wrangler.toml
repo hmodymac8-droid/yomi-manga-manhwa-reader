@@ -1,0 +1,20 @@
+# Yomi web: the Worker that fetches the supported manga sites for the website (src/index.ts).
+#   deploy:  npx wrangler deploy     (from this folder)
+name = "yomi-web-api"
+main = "src/index.ts"
+compatibility_date = "2026-11-01"
+workers_dev = true
+preview_urls = false
+
+[vars]
+# The website addresses allowed to read the answers (comma-separated).
+ALLOWED_ORIGINS = "https://yomi-web.pages.dev"
+
+# How often one visitor may ask: 240 requests a minute (reading a chapter needs a handful).
+[[ratelimits]]
+name = "LIMITER"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 240
+  period = 60

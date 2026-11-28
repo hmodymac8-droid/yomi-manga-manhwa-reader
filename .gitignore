@@ -8,3 +8,6 @@ out
 *.tsbuildinfo
 .vscode
 .claude/
+dist-web
+.env.local
+.wrangler

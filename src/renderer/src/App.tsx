@@ -10,6 +10,7 @@ import NewChapters from './components/NewChapters'
 import QuickOpen from './components/QuickOpen'
 import Stats from './components/Stats'
 import type { OpenChapter, OpenSeries } from './lib'
+import { IS_WEB } from './lib'
 import type { MiniSession, SiteHealth, SourceInfo, UpdateStatus } from '../../preload/index.d'
 import logo from './assets/yomi-logo.png'
 import { Icon } from './components/Icon'
@@ -121,6 +122,9 @@ function MiniTitleBar({ onReturn }: { onReturn: () => void }): React.JSX.Element
     </div>
   )
 }
+
+/** The screens the web version has (the others need the Windows app: downloads, adding sites, site checks…). */
+const WEB_SCREENS: string[] = ['browse', 'following', 'settings']
 
 function AppInner({ mini }: { mini: boolean }): React.JSX.Element {
   // The open screen is kept in this window's session storage, so if the screen ever restarts (a crash, low memory)
@@ -347,7 +351,7 @@ function AppInner({ mini }: { mini: boolean }): React.JSX.Element {
   const onBrowse = view.name === 'browse' || view.name === 'added'
   // broken sites, as a number on the Sites tab
   const brokenSites = sources.filter((s) => levelOf(health[s.id]) === 'fail').length
-  const nav: { id: View['name']; label: string; icon: string; n?: number }[] = [
+  const allNav: { id: View['name']; label: string; icon: string; n?: number }[] = [
     { id: 'browse', label: t('Discover'), icon: 'home' },
     { id: 'new', label: t('New'), icon: 'bell', n: newCount || undefined },
     { id: 'following', label: t('Following'), icon: 'bookmark', n: upd?.following },
@@ -357,11 +361,12 @@ function AppInner({ mini }: { mini: boolean }): React.JSX.Element {
     { id: 'stats', label: t('Stats'), icon: 'chart' },
     { id: 'settings', label: t('Settings'), icon: 'settings' }
   ]
+  const nav = allNav.filter((n) => !IS_WEB || WEB_SCREENS.includes(n.id))
   const totalTitles = sources.reduce((n, s) => n + s.count, 0)
 
   return (
     <div className={mini ? 'miniapp' : 'app'}>
-      {mini ? <MiniTitleBar onReturn={() => void returnToMain()} /> : <TitleBar />}
+      {mini ? <MiniTitleBar onReturn={() => void returnToMain()} /> : !IS_WEB && <TitleBar />}
       {crash && (
         <div className="datatrouble" role="alert">
           {crash === 'oom' ? (

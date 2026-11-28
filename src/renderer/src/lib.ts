@@ -1,7 +1,15 @@
 import { ago, num, t } from './i18n'
 
+/** Set by the web version (src/web/main.ts); the Windows app leaves it unset. */
+const webImage = (globalThis as { yomiWebImage?: (img: string, referer: string) => string }).yomiWebImage
+
+/** True in the web version (the browser): Windows-only features are hidden (see also [data-desktop] in main.css). */
+export const IS_WEB = (globalThis as { api?: { isWeb?: boolean } }).api?.isWeb === true
+
 /** Wraps a remote image URL so the main process fetches it with the right Referer. */
 export function proxied(img: string, referer: string): string {
+  // on the web there is no mr-img: pictures load straight from the site (see src/web/api.ts webImage)
+  if (webImage) return webImage(img, referer)
   return `mr-img://img/?u=${encodeURIComponent(img)}&r=${encodeURIComponent(referer)}`
 }
 
@@ -10,6 +18,7 @@ export function proxied(img: string, referer: string): string {
  * and takes far less memory than the original.
  */
 export function coverSrc(img: string, referer: string): string {
+  if (webImage) return webImage(img, referer)
   return proxied(img, referer) + '&c=1'
 }
 

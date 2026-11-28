@@ -3,7 +3,7 @@ import { Icon } from './Icon'
 import { useEffect, useRef, useState } from 'react'
 import type { DownloadItem, DownloadRequest, FollowInfo, ProgressRecord, SeriesDetail, SiteSpeed } from '../../../preload/index.d'
 import { createShareLink, type ShareInfo } from '../shareCard'
-import { OpenChapter, OpenSeries, chapterKey, chapterNumber as numberInTitle, fallbackCover, pageSrc, coverSrc } from '../lib'
+import { IS_WEB, OpenChapter, OpenSeries, chapterKey, chapterNumber as numberInTitle, fallbackCover, pageSrc, coverSrc } from '../lib'
 import AniListLinkPanel from './AniListLink'
 import { SimilarRow } from './Similar'
 import { MalLine } from './Mal'
@@ -572,6 +572,7 @@ export default function Series({ series, onBack, onRead, onOpen, backLabel }: Pr
               </button>
               <button
                 className="mini big"
+                data-desktop
                 title={t('Copy a link to this series with where you are. Paste it in Discord, Telegram or WhatsApp and it shows a clickable card')}
                 onClick={async () => {
                   setShareNote(t('Making link…'))
@@ -590,9 +591,9 @@ export default function Series({ series, onBack, onRead, onOpen, backLabel }: Pr
               {follow && follow.unread > 0 && <span className="count">{t('{n} new', { n: num(follow.unread) })}</span>}
             </div>
           )}
-          {detail && <AniListLinkPanel seriesUrl={entry.url} title={detail.title || series.title} />}
+          {detail && !IS_WEB && <AniListLinkPanel seriesUrl={entry.url} title={detail.title || series.title} />}
           {onOpen && <SimilarRow title={series.title} seriesUrl={entry.url} onOpen={onOpen} />}
-          {detail && !offline && list.length > 0 && (
+          {detail && !offline && list.length > 0 && !IS_WEB && (
             <div className="resume">
               <button className="mini big" onClick={() => downloadMany(unread, 'unread')}>
                 {t('⬇ Download unread ({n})', { n: num(unread.length) })}

@@ -455,6 +455,8 @@ export interface MalTopItem {
 export type MalTopKind = 'popular' | 'manhwa' | 'manga' | 'manhua'
 
 export interface MangaApi {
+  /** True in the web version (the browser), where Windows-only features are hidden. */
+  isWeb?: boolean
   /** Start reading a series' chapter list in the background (hovering its cover). */
   prefetchSeries: (sourceId: string, url: string) => Promise<void>
   /** The chapters found so far while a long chapter list is still being read. */
