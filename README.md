@@ -5,6 +5,7 @@
 <p align="center">
   <b>All your manga, manhwa and manhua sites in one clean, ad-free reader for Windows.</b><br>
   <a href="https://github.com/hmodymac8-droid/yomi-manga-manhwa-reader/releases/latest"><b>⬇ Download for Windows</b></a>
+  &nbsp;·&nbsp; <a href="https://hmodymac8-droid.github.io/yomi-manga-manhwa-reader/">Website</a>
   &nbsp;·&nbsp; <a href="#العربية">العربية</a>
 </p>
 
