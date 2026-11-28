@@ -4,6 +4,7 @@ import { OpenChapter, OpenSeries, chapterNumber, localPage, pageSrc } from '../l
 import { Icon } from './Icon'
 import { ThemeToggle } from './ThemeToggle'
 import { findBorders, type Insets } from '../pagetools'
+import { isRtl, t } from '../i18n'
 import {
   ORIGINAL_DEFAULTS,
   loadSeriesOverride,
@@ -27,6 +28,7 @@ const clampW = (n: number): number => Math.max(WMIN, Math.min(WMAX, n))
 type Bg = 'dark' | 'black' | 'sepia'
 type Tone = 'off' | 'warm' | 'dim' | 'gray'
 const TONES = ['off', 'warm', 'dim', 'gray'] as const
+// shown through t() where it is drawn
 const TONE_NAMES: Record<Tone, string> = {
   off: 'Original',
   warm: 'Warm (night)',
@@ -363,10 +365,10 @@ export default function Reader({
       if (active) void window.api.statsTime(now - lastTick)
       lastTick = now
     }
-    const t = window.setInterval(report, 30000)
+    const timer = window.setInterval(report, 30000)
     return () => {
       report()
-      window.clearInterval(t)
+      window.clearInterval(timer)
       for (const ev of evs) window.removeEventListener(ev, used, { capture: true })
     }
   }, [])
@@ -603,19 +605,19 @@ export default function Reader({
       if (dl && dl.files.length > 0) {
         show(
           dl.files.map((f) => localPage(dl, f)),
-          `${dl.seriesTitle} · ${dl.chapterTitle} (saved)`
+          t('{series} · {chapter} (saved)', { series: dl.seriesTitle, chapter: dl.chapterTitle })
         )
         return
       }
 
-      let lastError = 'No manga pages found on that chapter page.'
+      let lastError = t('No manga pages found on that chapter page.')
       // A source already out of rotation is not waited on: another copy of the chapter is opened at once.
       const state = await window.api.sourceState(chapterSite)
       let deadHost =
         state.availability === 'down' || state.availability === 'degraded'
           ? bare(state.baseUrl)
           : ''
-      if (deadHost) setStage(`${state.name} is down. Looking for another copy…`)
+      if (deadHost) setStage(t('{site} is down. Looking for another copy…', { site: state.name }))
       for (const u of urls) {
         if (deadHost && bare(u) === deadHost) continue
         const res = await window.api.grabChapter(u)
@@ -633,12 +635,19 @@ export default function Reader({
       // This site didn't give the chapter: look for the same chapter (by its number) on your other sites that have
       // this series, and read it from there.
       const here = state.name || chapterSiteName || chapterSite
-      setStage(`${here} didn't open this chapter. Looking for it on your other sites…`)
+      setStage(
+        t("{site} didn't open this chapter. Looking for it on your other sites…", { site: here })
+      )
       const other = await fromOtherSites(() => cancelled)
       if (cancelled) return
       if (other) {
         show(other.pages, other.title, other.referer)
-        setNote(`Opened from ${other.site} — ${here} didn't load this chapter.`)
+        setNote(
+          t("Opened from {other} — {site} didn't load this chapter.", {
+            other: other.site,
+            site: here
+          })
+        )
         return
       }
       setStage('')
@@ -665,7 +674,7 @@ export default function Reader({
     }
     for (const e of entries) {
       if (stop()) return null
-      setStage(`Trying ${e.sourceName}…`)
+      setStage(t('Trying {site}…', { site: e.sourceName }))
       const res = await window.api.getSeries(e.sourceId, e.url)
       if (!res.ok) continue
       const c = res.data.chapters.find((x) => chapterNumber(x.title) === num)
@@ -1011,6 +1020,13 @@ export default function Reader({
     )
   }
 
+  // Arabic: the bar flips by itself, so its arrows swap to point the right way. The page area stays left to right (for
+  // the pages), so the text in it is set right to left here.
+  const rtl = isRtl()
+  const uiDir = rtl ? 'rtl' : undefined
+  // A left-to-right mark after a site's chapter name keeps a "?" or "!" at its end in a right-to-left sentence.
+  const keepEnd = (s: string): string => (rtl ? s + String.fromCharCode(0x200e) : s)
+
   return (
     <div
       className={`readerview${compact ? ' compact' : ''}`}
@@ -1036,10 +1052,10 @@ export default function Reader({
         <button
           className="iconbtn round"
           onClick={onBack}
-          title="Back to the chapter list (Esc)"
-          aria-label="Back"
+          title={t('Back to the chapter list (Esc)')}
+          aria-label={t('Back')}
         >
-          <Icon name="back" />
+          <Icon name={rtl ? 'right' : 'back'} />
         </button>
         <div className="rtitle">
           <b>{series.title}</b>
@@ -1055,31 +1071,33 @@ export default function Reader({
           className="iconbtn"
           onClick={() => go(prevCh)}
           disabled={!prevCh}
-          title="Previous chapter"
-          aria-label="Previous chapter"
+          title={t('Previous chapter')}
+          aria-label={t('Previous chapter')}
         >
-          <Icon name="left" />
+          <Icon name={rtl ? 'right' : 'left'} />
         </button>
-        <button className="chpill" onClick={onBack} title="All chapters">
+        <button className="chpill" onClick={onBack} title={t('All chapters')}>
           <Icon name="list" />
-          {chapter.title.replace(/^chapter\s*/i, 'Ch. ')}
+          {/^chapter\s*/i.test(chapter.title)
+            ? t('Ch. {n}', { n: chapter.title.replace(/^chapter\s*/i, '') })
+            : chapter.title}
         </button>
         <button
           className="iconbtn"
           onClick={() => go(nextCh)}
           disabled={!nextCh}
-          title="Next chapter"
-          aria-label="Next chapter"
+          title={t('Next chapter')}
+          aria-label={t('Next chapter')}
         >
-          <Icon name="right" />
+          <Icon name={rtl ? 'left' : 'right'} />
         </button>
         <span className="vdiv" />
-        <div className="widthctl" title="Page width (- / + keys, or Ctrl + wheel)">
+        <div className="widthctl" title={t('Page width (- / + keys, or Ctrl + wheel)')}>
           <button
             className="iconbtn"
             onClick={() => setZoom((z) => clampW(z - WSTEP))}
             disabled={zoom <= WMIN}
-            aria-label="Narrower pages"
+            aria-label={t('Narrower pages')}
           >
             <Icon name="minus" />
           </button>
@@ -1088,15 +1106,15 @@ export default function Reader({
             className="iconbtn"
             onClick={() => setZoom((z) => clampW(z + WSTEP))}
             disabled={zoom >= WMAX}
-            aria-label="Wider pages"
+            aria-label={t('Wider pages')}
           >
             <Icon name="plus" />
           </button>
         </div>
         <button
           className="iconbtn"
-          title="Zoom in on a page (Z). Scroll to zoom, drag to move"
-          aria-label="Zoom in on a page"
+          title={t('Zoom in on a page (Z). Scroll to zoom, drag to move')}
+          aria-label={t('Zoom in on a page')}
           onClick={() => setLens((l) => (l ? null : { ...mouse.current }))}
         >
           <Icon name="search" />
@@ -1104,8 +1122,8 @@ export default function Reader({
         {!compact && (
           <button
             className="iconbtn"
-            title="Mini reader: a small window that stays on top"
-            aria-label="Mini reader"
+            title={t('Mini reader: a small window that stays on top')}
+            aria-label={t('Mini reader')}
             onClick={() => void popMini()}
           >
             <Icon name="pip" />
@@ -1113,8 +1131,8 @@ export default function Reader({
         )}
         <button
           className="iconbtn"
-          title="Download this chapter"
-          aria-label="Download this chapter"
+          title={t('Download this chapter')}
+          aria-label={t('Download this chapter')}
           onClick={() => {
             const cur = chapter.chapters.find((c) => c.url === chapter.url)
             void window.api.downloadEnqueue([
@@ -1134,8 +1152,8 @@ export default function Reader({
         </button>
         <button
           className="iconbtn"
-          title="Full screen"
-          aria-label="Full screen"
+          title={t('Full screen')}
+          aria-label={t('Full screen')}
           onClick={() =>
             document.fullscreenElement
               ? void document.exitFullscreen()
@@ -1153,8 +1171,8 @@ export default function Reader({
                 return !m
               })
             }
-            title="Reading settings"
-            aria-label="Reading settings"
+            title={t('Reading settings')}
+            aria-label={t('Reading settings')}
           >
             <Icon name="settings" />
           </button>
@@ -1162,13 +1180,13 @@ export default function Reader({
             <div className="rmenupop">
               <div className="rbright">
                 <div className="rlabel">
-                  Brightness <b>{bright}%</b>
+                  {t('Brightness')} <b>{bright}%</b>
                 </div>
                 <div className="rbrightrow">
                   <button
                     className="iconbtn"
-                    aria-label="Darker"
-                    title="Darker ( [ )"
+                    aria-label={t('Darker')}
+                    title={t('Darker ( [ )')}
                     disabled={bright <= BRIGHT_MIN}
                     onClick={() => setBright((b) => Math.max(BRIGHT_MIN, b - BRIGHT_STEP))}
                   >
@@ -1180,13 +1198,13 @@ export default function Reader({
                     max={100}
                     step={BRIGHT_STEP}
                     value={bright}
-                    aria-label="Page brightness"
+                    aria-label={t('Page brightness')}
                     onChange={(e) => setBright(Number(e.target.value))}
                   />
                   <button
                     className="iconbtn"
-                    aria-label="Brighter"
-                    title="Brighter ( ] )"
+                    aria-label={t('Brighter')}
+                    title={t('Brighter ( ] )')}
                     disabled={bright >= 100}
                     onClick={() => setBright((b) => Math.min(100, b + BRIGHT_STEP))}
                   >
@@ -1198,58 +1216,58 @@ export default function Reader({
                 className="rfold"
                 onClick={() => setHowOpen((v) => !v)}
                 aria-expanded={howOpen}
-                title="Reading mode"
+                title={t('Reading mode')}
               >
-                <span>Reading mode</span>
-                <b>{mode === 'webtoon' ? 'Scroll down' : 'Page by page'}</b>
+                <span>{t('Reading mode')}</span>
+                <b>{mode === 'webtoon' ? t('Scroll down') : t('Page by page')}</b>
                 <span className="rchev">{howOpen ? '▴' : '▾'}</span>
               </button>
               {howOpen && (
                 <>
                   <div className="rgroup">
-                    <div className="rlabel">Mode</div>
+                    <div className="rlabel">{t('Mode')}</div>
                     <div className="rseg">
                       <button
                         className={mode === 'webtoon' ? 'on' : ''}
                         onClick={() => setMode('webtoon')}
                       >
-                        Scroll down
+                        {t('Scroll down')}
                       </button>
                       <button
                         className={mode === 'paged' ? 'on' : ''}
                         onClick={() => setMode('paged')}
                       >
-                        Page by page
+                        {t('Page by page')}
                       </button>
                     </div>
                   </div>
                   {mode === 'paged' && (
                     <>
                       <div className="rgroup">
-                        <div className="rlabel">Direction</div>
+                        <div className="rlabel">{t('Direction')}</div>
                         <div className="rseg">
                           <button
                             className={dir === 'rtl' ? 'on' : ''}
                             onClick={() => setDir('rtl')}
                           >
-                            Right to left
+                            {t('Right to left')}
                           </button>
                           <button
                             className={dir === 'ltr' ? 'on' : ''}
                             onClick={() => setDir('ltr')}
                           >
-                            Left to right
+                            {t('Left to right')}
                           </button>
                         </div>
                       </div>
                       <div className="rgroup">
-                        <div className="rlabel">Pages</div>
+                        <div className="rlabel">{t('Pages')}</div>
                         <div className="rseg">
                           <button className={!spread ? 'on' : ''} onClick={() => setSpread(false)}>
-                            Single page
+                            {t('Single page')}
                           </button>
                           <button className={spread ? 'on' : ''} onClick={() => setSpread(true)}>
-                            Two pages
+                            {t('Two pages')}
                           </button>
                         </div>
                         {spread && (
@@ -1257,117 +1275,122 @@ export default function Reader({
                             className={`rmini${coverSingle ? ' on' : ''}`}
                             onClick={() => setCover(!coverSingle)}
                           >
-                            Cover on its own
+                            {t('Cover on its own')}
                           </button>
                         )}
                       </div>
                     </>
                   )}
                   <div className="rgroup">
-                    <div className="rlabel">By type</div>
+                    <div className="rlabel">{t('By type')}</div>
                     <div className="rseg">
                       <button
                         className={!openByType ? 'on' : ''}
                         onClick={() => setOpenByType(false)}
                       >
-                        Off
+                        {t('Off')}
                       </button>
                       <button
                         className={openByType ? 'on' : ''}
                         onClick={() => setOpenByType(true)}
                       >
-                        On — manga RTL, manhwa scroll
+                        {t('On — manga RTL, manhwa scroll')}
                       </button>
                     </div>
                   </div>
                   <div className="rgroup">
-                    <div className="rlabel">Apply to</div>
+                    <div className="rlabel">{t('Apply to')}</div>
                     <div className="rseg">
                       <button
                         className={scope === 'series' ? 'on' : ''}
                         onClick={() => setScope('series')}
                       >
-                        This series
+                        {t('This series')}
                       </button>
                       <button
                         className={scope === 'all' ? 'on' : ''}
                         onClick={() => setScope('all')}
                       >
-                        All series
+                        {t('All series')}
                       </button>
                     </div>
                     <button className="rreset" onClick={resetLayout}>
-                      Reset to default
+                      {t('Reset to default')}
                     </button>
                   </div>
                 </>
               )}
-              <div className="sub">Extras (all optional)</div>
+              <div className="sub">{t('Extras (all optional)')}</div>
               <button
                 onClick={() => setFit(fit === 'width' ? 'height' : 'width')}
-                title="Shortcut: F"
+                title={t('Shortcut: F')}
               >
-                Fit <b>{fit === 'width' ? 'Width' : 'Height'}</b>
+                {t('Fit')} <b>{fit === 'width' ? t('Width') : t('Height')}</b>
               </button>
               <button
                 onClick={() => setAutoNext((a) => !a)}
-                title="At the end of a chapter, keep scrolling down to open the next one"
+                title={t('At the end of a chapter, keep scrolling down to open the next one')}
               >
-                Scroll on to next chapter <b>{autoNext ? 'On' : 'Off'}</b>
+                {t('Scroll on to next chapter')} <b>{autoNext ? t('On') : t('Off')}</b>
               </button>
               <button
                 onClick={() => setBg(bg === 'dark' ? 'black' : bg === 'black' ? 'sepia' : 'dark')}
               >
-                Background <b>{bg === 'dark' ? 'Theme' : bg === 'black' ? 'Black' : 'Sepia'}</b>
+                {t('Background')}{' '}
+                <b>{bg === 'dark' ? t('Theme') : bg === 'black' ? t('Black') : t('Sepia')}</b>
               </button>
               <button
                 onClick={() => setAutoRun((r) => !r)}
                 disabled={mode !== 'webtoon'}
                 title={
                   mode === 'webtoon'
-                    ? 'Shortcut: A · Up / Down arrows change the speed'
-                    : 'Works in vertical scroll'
+                    ? t('Shortcut: A · Up / Down arrows change the speed')
+                    : t('Works in vertical scroll')
                 }
               >
-                Auto-scroll <b>{autoRun ? 'On' : 'Off'}</b>
+                {t('Auto-scroll')} <b>{autoRun ? t('On') : t('Off')}</b>
               </button>
               <button
                 onClick={() =>
                   setCtlMode(ctlMode === 'auto' ? 'show' : ctlMode === 'show' ? 'hide' : 'auto')
                 }
-                title="The speed control at the bottom while auto-scrolling"
+                title={t('The speed control at the bottom while auto-scrolling')}
               >
-                Auto-scroll controls{' '}
+                {t('Auto-scroll controls')}{' '}
                 <b>
                   {ctlMode === 'auto'
-                    ? 'Hide by themselves'
+                    ? t('Hide by themselves')
                     : ctlMode === 'show'
-                      ? 'Always show'
-                      : 'Never show'}
+                      ? t('Always show')
+                      : t('Never show')}
                 </b>
               </button>
               <button onClick={() => setTone(TONES[(TONES.indexOf(tone) + 1) % TONES.length])}>
-                Page colour <b>{TONE_NAMES[tone]}</b>
+                {t('Page colour')} <b>{t(TONE_NAMES[tone])}</b>
               </button>
               <button
                 onClick={() => setSharpen((v) => !v)}
-                title="Makes blurry, low-quality pages crisper"
+                title={t('Makes blurry, low-quality pages crisper')}
               >
-                Sharpen <b>{sharpen ? 'On' : 'Off'}</b>
+                {t('Sharpen')} <b>{sharpen ? t('On') : t('Off')}</b>
               </button>
               <button
                 onClick={() => setAutocrop((v) => !v)}
-                title="Cuts the plain white or black margins around pages"
+                title={t('Cuts the plain white or black margins around pages')}
               >
-                Cut white borders <b>{autocrop ? 'On' : 'Off'}</b>
+                {t('Cut white borders')} <b>{autocrop ? t('On') : t('Off')}</b>
               </button>
               {pages.length > 0 && (
                 <div className="sub">
                   {mode === 'paged'
                     ? spread && view.size === 2
-                      ? `Pages ${view.start + 1}–${view.start + 2} of ${pages.length}`
-                      : `Page ${index + 1} of ${pages.length}`
-                    : `${pages.length} pages`}
+                      ? t('Pages {a}–{b} of {n}', {
+                          a: view.start + 1,
+                          b: view.start + 2,
+                          n: pages.length
+                        })
+                      : t('Page {i} of {n}', { i: index + 1, n: pages.length })
+                    : t('{n} pages', { n: pages.length })}
                 </div>
               )}
             </div>
@@ -1379,7 +1402,9 @@ export default function Reader({
         <span />
       </div>
 
-      {loading && <div className="hint">{stage || 'Opening chapter and collecting pages…'}</div>}
+      {loading && (
+        <div className="hint">{stage || t('Opening chapter and collecting pages…')}</div>
+      )}
       {note && <div className="readnote">{note}</div>}
       {error && <div className="error">{error}</div>}
 
@@ -1396,7 +1421,7 @@ export default function Reader({
         <div
           className={`autoscroll${ctlMode === 'show' || (ctlMode === 'auto' && ctlSeen) ? '' : ' hidden'}`}
           role="group"
-          aria-label="Auto-scroll"
+          aria-label={t('Auto-scroll')}
           onMouseEnter={() => {
             ctlHover.current = true
             showCtl()
@@ -1407,12 +1432,12 @@ export default function Reader({
           }}
         >
           <span className="spin slow" />
-          Auto-scroll
+          {t('Auto-scroll')}
           <button
             className="iconbtn"
             onClick={() => setSpeed((v) => Math.max(0, v - 1))}
             disabled={speed === 0}
-            aria-label="Slower"
+            aria-label={t('Slower')}
           >
             <Icon name="minus" />
           </button>
@@ -1424,29 +1449,29 @@ export default function Reader({
             step={1}
             value={speed}
             onChange={(e) => setSpeed(Number(e.target.value))}
-            aria-label="Auto-scroll speed"
-            title="Drag to set the speed (or use the Up / Down arrows)"
+            aria-label={t('Auto-scroll speed')}
+            title={t('Drag to set the speed (or use the Up / Down arrows)')}
           />
           <b className="speednum">{speed + 1}</b>
           <button
             className="iconbtn"
             onClick={() => setSpeed((v) => Math.min(SPEEDS.length - 1, v + 1))}
             disabled={speed === SPEEDS.length - 1}
-            aria-label="Faster"
+            aria-label={t('Faster')}
           >
             <Icon name="plus" />
           </button>
-          <button className="secondary" onClick={() => setAutoRun(false)} title="Shortcut: A">
-            Stop
+          <button className="secondary" onClick={() => setAutoRun(false)} title={t('Shortcut: A')}>
+            {t('Stop')}
           </button>
         </div>
       )}
       {pages.length > 0 && mode === 'webtoon' && (
         <div className="readpct">
           {stillLoading && (
-            <span className="loadingpages" title="Pages still downloading">
+            <span className="loadingpages" title={t('Pages still downloading')}>
               <span className="spin" />
-              {settledN}/{pages.length} pages ·{' '}
+              {t('{done}/{n} pages', { done: settledN, n: pages.length })} ·{' '}
             </span>
           )}
           {pct}%
@@ -1464,11 +1489,14 @@ export default function Reader({
           {mode === 'webtoon' ? (
             <>
               {pages.map((p, i) => renderPage(p, i, false))}
-              <div className="endch">
+              <div className="endch" dir={uiDir}>
                 {stillLoading ? (
                   <div className="pagesleft">
                     <span className="spin" />
-                    Pages are still loading · {settledN} of {pages.length}
+                    {t('Pages are still loading · {done} of {n}', {
+                      done: settledN,
+                      n: pages.length
+                    })}
                     <span className="pullbar">
                       <span style={{ width: `${(settledN / pages.length) * 100}%` }} />
                     </span>
@@ -1476,28 +1504,35 @@ export default function Reader({
                 ) : (
                   failedN > 0 && (
                     <div className="pagesleft bad">
-                      {failedN === 1 ? '1 page' : `${failedN} pages`} didn&apos;t load. Scroll up
-                      and press Try again on it.
+                      {failedN === 1
+                        ? t("1 page didn't load. Scroll up and press Try again on it.")
+                        : t("{n} pages didn't load. Scroll up and press Try again on it.", {
+                            n: failedN
+                          })}
                     </div>
                   )
                 )}
-                <div className="endk">終 · End of {chapter.title}</div>
+                <div className="endk">
+                  終 · {t('End of {chapter}', { chapter: keepEnd(chapter.title) })}
+                </div>
                 <div className="upnext">
-                  {nextCh ? `Up next: ${nextCh.title}` : "You're all caught up"}
+                  {nextCh
+                    ? t('Up next: {chapter}', { chapter: keepEnd(nextCh.title) })
+                    : t("You're all caught up")}
                 </div>
                 <div className="endact">
                   {nextCh && (
                     <button className="primary" onClick={() => go(nextCh)}>
-                      Next chapter
+                      {t('Next chapter')}
                     </button>
                   )}
                   <button className="secondary" onClick={onBack}>
-                    All chapters
+                    {t('All chapters')}
                   </button>
                 </div>
                 {nextCh && autoNext && !stillLoading && !showPreview && (
                   <div className="hint2 pullhint">
-                    or keep scrolling down
+                    {t('or keep scrolling down')}
                     <span className="pullbar">
                       <span style={{ width: `${pull * 100}%` }} />
                     </span>
@@ -1567,20 +1602,19 @@ function PageWait({
   onRetry: () => void
 }): React.JSX.Element {
   return (
-    <div className={`pagewait${bad ? ' bad' : ''}`}>
+    // dir: the page area is kept left to right, so Arabic text in it is set right to left here
+    <div className={`pagewait${bad ? ' bad' : ''}`} dir={isRtl() ? 'rtl' : undefined}>
       {bad ? (
         <>
-          <span>Page {n} didn&apos;t load</span>
+          <span>{t("Page {n} didn't load", { n })}</span>
           <button className="secondary" onClick={onRetry}>
-            Try again
+            {t('Try again')}
           </button>
         </>
       ) : (
         <>
           <span className="spin" />
-          <span>
-            Loading page {n} of {of}…
-          </span>
+          <span>{t('Loading page {n} of {of}…', { n, of })}</span>
         </>
       )}
     </div>

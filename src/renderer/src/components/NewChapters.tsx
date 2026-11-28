@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { FollowInfo, NewChapter, SourceInfo, UpdateStatus } from '../../../preload/index.d'
-import { OpenChapter, OpenSeries, coverSrc, readerFor, timeAgo } from '../lib'
+import { OpenChapter, OpenSeries, coverSrc, readerFor } from '../lib'
+import { ago, num, t } from '../i18n'
 
 interface Props {
   onOpen: (s: OpenSeries) => void
@@ -81,7 +82,7 @@ export default function NewChapters({ onOpen, onRead }: Props): React.JSX.Elemen
     const c = await readerFor(r.f.sourceId, r.f.seriesUrl, (chs) => chs.find((x) => x.url === r.c.url || x.alts?.includes(r.c.url)) ?? { title: r.c.title, url: r.c.url, alts: r.c.alts })
     setOpening('')
     if (c) onRead(seriesOf(r.f), c)
-    else setOpenError(`Couldn't open ${r.f.title} right now. Open it from its page instead.`)
+    else setOpenError(t("Couldn't open {title} right now. Open it from its page instead.", { title: r.f.title }))
   }
 
   const unreadCount = rows.filter((r) => r.unread).length
@@ -91,19 +92,19 @@ export default function NewChapters({ onOpen, onRead }: Props): React.JSX.Elemen
       <div className="pagehead">
         <div>
           <div className="kicker">新着</div>
-          <h1>New</h1>
+          <h1>{t('New')}</h1>
           <p>
-            New chapters of the series you follow
-            {unreadCount > 0 ? ` · ${unreadCount} not read yet` : ''}
-            {status?.lastChecked ? ` · checked ${timeAgo(status.lastChecked)}` : ''}
+            {t('New chapters of the series you follow')}
+            {unreadCount > 0 ? ` · ${t('{n} not read yet', { n: num(unreadCount) })}` : ''}
+            {status?.lastChecked ? ` · ${t('checked {ago}', { ago: ago(status.lastChecked) })}` : ''}
           </p>
         </div>
         <div className="pageact">
           <label className="auto">
-            <input type="checkbox" checked={unreadOnly} onChange={(e) => setUnreadOnly(e.target.checked)} /> Not read only
+            <input type="checkbox" checked={unreadOnly} onChange={(e) => setUnreadOnly(e.target.checked)} /> {t('Not read only')}
           </label>
           <button className="primary" disabled={!!status?.checking} onClick={() => void window.api.updatesCheck()}>
-            {status?.checking ? 'Checking…' : 'Check now'}
+            {status?.checking ? t('Checking…') : t('Check now')}
           </button>
         </div>
       </div>
@@ -112,10 +113,10 @@ export default function NewChapters({ onOpen, onRead }: Props): React.JSX.Elemen
       {loaded && rows.length === 0 && (
         <div className="hint">
           {list.length === 0
-            ? "You aren't following anything yet. Follow a series (or just read it) and its new chapters show up here."
+            ? t("You aren't following anything yet. Follow a series (or just read it) and its new chapters show up here.")
             : unreadOnly
-              ? "You've read every new chapter."
-              : 'No new chapters yet. Yomi checks the series you follow every so often, or press Check now.'}
+              ? t("You've read every new chapter.")
+              : t('No new chapters yet. Yomi checks the series you follow every so often, or press Check now.')}
         </div>
       )}
 
@@ -125,22 +126,22 @@ export default function NewChapters({ onOpen, onRead }: Props): React.JSX.Elemen
         return (
           <section key={g} className="newgroup">
             <h2>
-              {g} <span>{inGroup.length}</span>
+              {t(g)} <span>{num(inGroup.length)}</span>
             </h2>
             {inGroup.map((r) => (
               <div key={r.f.seriesUrl + r.c.url} className={`newrow${r.unread ? '' : ' seen'}`}>
-                <button className="newcover" onClick={() => onOpen(seriesOf(r.f))} title="Open the series">
+                <button className="newcover" onClick={() => onOpen(seriesOf(r.f))} title={t('Open the series')}>
                   {r.f.cover ? <img loading="lazy" src={coverSrc(r.f.cover, r.f.coverReferer)} alt="" /> : <span>{r.f.title.slice(0, 1)}</span>}
                 </button>
                 <div className="newtext">
                   <b>{r.f.title}</b>
                   <span>
-                    {r.c.title} · {siteName(r.f.sourceId)} · {timeAgo(r.c.at)}
-                    {r.unread ? '' : ' · read'}
+                    {r.c.title} · {siteName(r.f.sourceId)} · {ago(r.c.at)}
+                    {r.unread ? '' : ` · ${t('read')}`}
                   </span>
                 </div>
                 <button className={r.unread ? 'primary' : 'mini'} disabled={opening === r.c.url} onClick={() => void read(r)}>
-                  {opening === r.c.url ? 'Opening…' : r.unread ? 'Read' : 'Read again'}
+                  {opening === r.c.url ? t('Opening…') : r.unread ? t('Read') : t('Read again')}
                 </button>
               </div>
             ))}

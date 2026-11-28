@@ -1,3 +1,5 @@
+import { currentLang, t } from './i18n'
+
 export interface ShareInfo {
   title: string
   cover: string
@@ -39,6 +41,12 @@ export async function createShareLink(info: ShareInfo): Promise<string> {
   }
   return await window.api.shareCreate(meta, bytes)
 }
+
+const LRM = '\u200E'
+const RLM = '\u200F'
+/** True when the first letter of the text is Arabic (or another right-to-left script). Digits and marks don't count. */
+const startsRtl = (s: string): boolean =>
+  /^[^\p{L}]*[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/u.test(s)
 
 /** Breaks text into at most `max` lines that fit `width`; the last line ends with "…" when it was cut. */
 function wrap(ctx: CanvasRenderingContext2D, text: string, width: number, max: number): string[] {
@@ -117,39 +125,59 @@ export async function makeShareCard(
     ctx.restore()
   }
 
+  // In Arabic the card's own words are drawn right to left (still centred). A series title or chapter name in Latin
+  // letters keeps reading left to right, so a "?" or "…" at its end stays at its end; the link is always left to right.
+  // The Arabic fonts come after the Latin ones, so they only draw the Arabic letters.
+  const rtl = currentLang() === 'ar'
+  const lineDir = (s: string): CanvasDirection => (startsRtl(s) ? 'rtl' : 'ltr')
+  const arSans = rtl ? '"Noto Sans Arabic Variable", ' : ''
+
   // Title
   ctx.textAlign = 'center'
   ctx.fillStyle = '#ffffff'
-  ctx.font = '700 62px "Newsreader Variable", Georgia, serif'
+  ctx.font = `700 62px "Newsreader Variable", ${rtl ? '"Noto Naskh Arabic Variable", ' : ''}Georgia, serif`
   const lines = wrap(ctx, info.title, W - 160, 2)
-  lines.forEach((l, i) => ctx.fillText(l, W / 2, 990 + i * 72))
+  lines.forEach((l, i) => {
+    if (rtl) ctx.direction = lineDir(l)
+    ctx.fillText(l, W / 2, 990 + i * 72)
+  })
+  if (rtl) ctx.direction = 'rtl'
 
   // Where you are, then tags
-  const total = info.chapters > 0 ? ` of ${info.chapters}` : ''
-  const progressLine = info.reading ? `I'm on ${info.reading}${total}` : ''
+  // (a left-to-right mark after a Latin chapter name keeps its own ending punctuation with it in the Arabic sentence)
+  const reading = info.reading && rtl && !startsRtl(info.reading) ? info.reading + LRM : info.reading
+  const progressLine = reading
+    ? info.chapters > 0
+      ? t("I'm on {chapter} of {n}", { chapter: reading, n: info.chapters })
+      : t("I'm on {chapter}", { chapter: reading })
+    : ''
   let y = 990 + lines.length * 72 + 20
   if (progressLine) {
     ctx.fillStyle = '#e4c94a'
-    ctx.font = '700 40px "DM Sans Variable", system-ui, sans-serif'
+    ctx.font = `700 40px "DM Sans Variable", ${arSans}system-ui, sans-serif`
     ctx.fillText(progressLine, W / 2, y)
     y += 56
   }
+  // (a right-to-left mark keeps "120 chapters" together after Latin tags in the Arabic line)
   const sub = [
     ...info.tags.slice(0, 4),
-    !progressLine && info.chapters > 0 ? `${info.chapters} chapters` : ''
+    !progressLine && info.chapters > 0
+      ? (rtl ? RLM : '') + t('{n} chapters', { n: info.chapters })
+      : ''
   ]
     .filter(Boolean)
     .join('  ·  ')
   ctx.fillStyle = 'rgba(255,255,255,0.78)'
-  ctx.font = '500 34px "DM Sans Variable", system-ui, sans-serif'
+  ctx.font = `500 34px "DM Sans Variable", ${arSans}system-ui, sans-serif`
   ctx.fillText(sub, W / 2, y)
 
   // Footer
   ctx.fillStyle = '#e4c94a'
-  ctx.font = '700 38px "DM Sans Variable", system-ui, sans-serif'
-  ctx.fillText('Read it on Yomi', W / 2, H - 92)
+  ctx.font = `700 38px "DM Sans Variable", ${arSans}system-ui, sans-serif`
+  ctx.fillText(t('Read it on Yomi'), W / 2, H - 92)
   ctx.fillStyle = 'rgba(255,255,255,0.6)'
   ctx.font = '500 30px "DM Sans Variable", system-ui, sans-serif'
+  if (rtl) ctx.direction = 'ltr'
   ctx.fillText('hmodymac8-droid.github.io/yomi-manga-manhwa-reader', W / 2, H - 46)
 
   return await new Promise<Blob>((resolve, reject) =>

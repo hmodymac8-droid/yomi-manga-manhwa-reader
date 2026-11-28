@@ -1,4 +1,5 @@
 import { BrowserWindow, app, safeStorage } from 'electron'
+import { mt } from './lang'
 import { existsSync, unlinkSync } from 'fs'
 import { join } from 'path'
 import { getSeriesCached, sourceForHost } from './catalog'
@@ -343,7 +344,7 @@ export async function connectAniList(parent?: BrowserWindow | null): Promise<Ani
     modal: !!parent && !parent.isDestroyed(),
     show: true,
     autoHideMenuBar: true,
-    title: 'Connect AniList',
+    title: mt('Connect AniList'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

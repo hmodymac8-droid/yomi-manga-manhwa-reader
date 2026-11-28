@@ -1,15 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import GenreProgress from './GenreProgress'
 import DeleteSite from './DeleteSite'
-import type { SiteHealth, SiteWatchStatus, SourceInfo } from '../../../preload/index.d'
-
-const ago = (t: number): string => {
-  const s = Math.max(0, Math.round((Date.now() - t) / 1000))
-  if (s < 60) return 'just now'
-  if (s < 3600) return Math.round(s / 60) + ' min ago'
-  if (s < 86400) return Math.round(s / 3600) + ' h ago'
-  return Math.round(s / 86400) + ' d ago'
-}
+import type { SiteHealth, SiteWatchSite, SiteWatchStatus, SourceInfo } from '../../../preload/index.d'
+import { ago, num, t } from '../i18n'
 
 type Level = 'ok' | 'warn' | 'fail' | 'unknown'
 
@@ -34,6 +27,13 @@ export function levelOf(h: SiteHealth | undefined): Level {
 }
 
 const LABEL: Record<Level, string> = { ok: 'Working', warn: 'Needs a look', fail: 'Broken', unknown: 'Not checked yet' }
+
+/** What the daily check found, in your language (the step's name too; its technical detail stays as the site gave it). */
+function whyText(x: SiteWatchSite): string {
+  if (x.fixed) return t(x.fixed)
+  const vars = x.vars?.step ? { ...x.vars, step: t(x.vars.step) } : x.vars
+  return t(x.tpl, vars)
+}
 
 export default function Sites({ onBack }: { onBack: () => void }): React.JSX.Element {
   const [all, setSources] = useState<SourceInfo[]>([])
@@ -102,18 +102,21 @@ export default function Sites({ onBack }: { onBack: () => void }): React.JSX.Ele
       <div className="pagehead">
         <div>
           <div className="kicker">サイト</div>
-          <h1>Sites</h1>
+          <h1>{t('Sites')}</h1>
           <p>
-            {sources.length} sites · {sources.reduce((n, s) => n + s.count, 0).toLocaleString()} titles merged. Re-check tests a
-            site like you would use it: title list, a chapter list, a chapter&apos;s pages and one image.
+            {t('{n} sites · {titles} titles merged.', {
+              n: num(sources.length),
+              titles: num(sources.reduce((n, s) => n + s.count, 0))
+            })}{' '}
+            {t("Re-check tests a site like you would use it: title list, a chapter list, a chapter's pages and one image.")}
           </p>
         </div>
         <div className="pageact">
           <button onClick={checkAll} disabled={anyBusy || sources.length === 0}>
-            {watch?.progress ? 'Checking…' : 'Check all now'}
+            {watch?.progress ? t('Checking…') : t('Check all now')}
           </button>
           <button className="primary" onClick={onBack}>
-            Add site
+            {t('Add site')}
           </button>
         </div>
       </div>
@@ -121,10 +124,15 @@ export default function Sites({ onBack }: { onBack: () => void }): React.JSX.Ele
       <GenreProgress startOpen />
       {hiddenCount > 0 && (
         <div className="sub" style={{ margin: '0 8px 12px' }}>
-          {hiddenCount} Yomi Library {hiddenCount === 1 ? 'site is' : 'sites are'} hidden. Turn on &quot;Show the Yomi Library&quot; in Settings to see {hiddenCount === 1 ? 'it' : 'them'}.
+          {t(
+            hiddenCount === 1
+              ? '{n} Yomi Library site is hidden. Turn on "Show the Yomi Library" in Settings to see it.'
+              : '{n} Yomi Library sites are hidden. Turn on "Show the Yomi Library" in Settings to see them.',
+            { n: num(hiddenCount) }
+          )}
         </div>
       )}
-      {sources.length === 0 && <div className="hint">No sites yet. Add one from the main screen.</div>}
+      {sources.length === 0 && <div className="hint">{t('No sites yet. Add one from the main screen.')}</div>}
       {rows.map((s) => {
         const h = health[s.id]
         const level = levelOf(h)
@@ -132,54 +140,59 @@ export default function Sites({ onBack }: { onBack: () => void }): React.JSX.Ele
         return (
           <div className="siterow" key={s.id}>
             <div className="sitehead">
-              <span className={'dot ' + level} title={LABEL[level]} />
+              <span className={'dot ' + level} title={t(LABEL[level])} />
               <div className="sitename">
                 <b>{s.name}</b>
                 <span className="sub">{s.baseUrl.replace(/^https?:\/\//, '').replace(/\/$/, '')}</span>
               </div>
-              <span className={'lvl ' + level}>{LABEL[level]}</span>
+              <span className={'lvl ' + level}>{t(LABEL[level])}</span>
               <DayStrip days={watch?.sites[s.id]?.days} />
               <span className="sub">
-                {s.count.toLocaleString()} titles{s.crawling ? ' · scanning…' : ''}
+                {t('{n} titles', { n: num(s.count) })}
+                {s.crawling ? ` · ${t('scanning…')}` : ''}
               </span>
               <span className="sub genrestat">
                 {gstat?.progress[s.id] ??
                   (gstat?.sites[s.id]?.running
-                    ? 'reading genres…'
+                    ? t('reading genres…')
                     : gstat?.sites[s.id]
                       ? gstat.sites[s.id].titles > 0
-                        ? `genres: ${gstat.sites[s.id].genres} · ${gstat.sites[s.id].titles.toLocaleString()} titles tagged · ${ago(gstat.sites[s.id].at)}`
-                        : 'no genre pages this site lets the app read'
-                      : 'genres: not read yet')}
+                        ? t('genres: {genres} · {titles} titles tagged · {when}', {
+                            genres: num(gstat.sites[s.id].genres),
+                            titles: num(gstat.sites[s.id].titles),
+                            when: ago(gstat.sites[s.id].at)
+                          })
+                        : t('no genre pages this site lets the app read')
+                      : t('genres: not read yet'))}
               </span>
               <span className="grow" />
               <button className="mini" onClick={() => setOpen((o) => ({ ...o, [s.id]: !o[s.id] }))}>
-                {open[s.id] ? 'Hide details' : 'Details'}
+                {open[s.id] ? t('Hide details') : t('Details')}
               </button>
               <button className="mini" disabled={s.crawling} onClick={() => void window.api.crawl(s.id)}>
-                Re-scan titles
+                {t('Re-scan titles')}
               </button>
               <button
                 className="mini"
                 disabled={!!gstat && Object.values(gstat.sites).some((x) => x.running)}
-                title="Read this site's genre pages now, so its titles can be filtered by genre"
+                title={t("Read this site's genre pages now, so its titles can be filtered by genre")}
                 onClick={() => void window.api.genreScanNow(s.id).then(() => setTimeout(refreshGenres, 800))}
               >
-                Read genres
+                {t('Read genres')}
               </button>
               <button className="mini on" disabled={!!busy[s.id]} onClick={() => void check(s.id)}>
-                {busy[s.id] ? 'Checking…' : 'Re-check'}
+                {busy[s.id] ? t('Checking…') : t('Re-check')}
               </button>
-              <button className="mini danger" title="Delete this site from Yomi" onClick={() => setDeleting(s)}>
-                Delete
+              <button className="mini danger" title={t('Delete this site from Yomi')} onClick={() => setDeleting(s)}>
+                {t('Delete')}
               </button>
             </div>
             {watch?.sites[s.id] && (watch.sites[s.id].cause !== 'ok' || watch.sites[s.id].fixed) && (
               <div className={'whyline ' + level}>
-                {watch.sites[s.id].fixed && <b>Fixed by itself: </b>}
-                {watch.sites[s.id].fixed ?? watch.sites[s.id].text}
+                {watch.sites[s.id].fixed && <b>{t('Fixed by itself:')} </b>}
+                {whyText(watch.sites[s.id])}
                 {watch.sites[s.id].brokeAt && level === 'fail' && (
-                  <span className="sub"> · broken since {ago(watch.sites[s.id].brokeAt!)}</span>
+                  <span className="sub"> · {t('broken since {when}', { when: ago(watch.sites[s.id].brokeAt!) })}</span>
                 )}
               </div>
             )}
@@ -187,20 +200,34 @@ export default function Sites({ onBack }: { onBack: () => void }): React.JSX.Ele
               <div className="sitebody">
                 <div className="sub">
                   {opens > 0
-                    ? `Your last ${opens} series opens: ${h!.ok} fine, ${h!.incomplete} cut short, ${h!.failed} failed` +
-                      (h!.lastAt ? ` (latest ${ago(h!.lastAt)})` : '')
-                    : 'No series opened from this site yet.'}
-                  {h?.lastError && h.failed > 0 && <span className="bad"> · last error: {h.lastError}</span>}
+                    ? h!.lastAt
+                      ? t('Your last {n} series opens: {ok} fine, {cut} cut short, {failed} failed (latest {when})', {
+                          n: num(opens),
+                          ok: num(h!.ok),
+                          cut: num(h!.incomplete),
+                          failed: num(h!.failed),
+                          when: ago(h!.lastAt)
+                        })
+                      : t('Your last {n} series opens: {ok} fine, {cut} cut short, {failed} failed', {
+                          n: num(opens),
+                          ok: num(h!.ok),
+                          cut: num(h!.incomplete),
+                          failed: num(h!.failed)
+                        })
+                    : t('No series opened from this site yet.')}
+                  {h?.lastError && h.failed > 0 && (
+                    <span className="bad"> · {t('last error: {error}', { error: h.lastError })}</span>
+                  )}
                 </div>
                 {h?.availability && h.availability !== 'ok' && (
                   <div className="sub">
-                    {h.availability === 'down' ? 'Out of rotation' : 'Unsteady'}
+                    {h.availability === 'down' ? t('Out of rotation') : t('Unsteady')}
                     {h.reason ? `: ${h.reason}` : ''}
-                    {h.failedAt ? ` · since ${ago(h.failedAt)}` : ''}
+                    {h.failedAt ? ` · ${t('since {when}', { when: ago(h.failedAt) })}` : ''}
                     {h.nextProbeAt
                       ? h.nextProbeAt > Date.now()
-                        ? ` · the old address is tried again in ${Math.max(1, Math.round((h.nextProbeAt - Date.now()) / 60000))} min`
-                        : ' · the old address is being tried again'
+                        ? ` · ${t('the old address is tried again in {n} min', { n: Math.max(1, Math.round((h.nextProbeAt - Date.now()) / 60000)) })}`
+                        : ` · ${t('the old address is being tried again')}`
                       : ''}
                   </div>
                 )}
@@ -211,25 +238,25 @@ export default function Sites({ onBack }: { onBack: () => void }): React.JSX.Ele
                       .reverse()
                       .map((ev) => (
                         <div key={ev.at + ev.reason}>
-                          {ago(ev.at)} · {ev.availability === 'ok' ? 'back up' : ev.availability} · {ev.reason}
+                          {ago(ev.at)} · {t(ev.availability === 'ok' ? 'back up' : ev.availability)} · {ev.reason}
                         </div>
                       ))}
                   </div>
                 )}
                 {h?.check ? (
                   <>
-                    <div className="sub">Last re-check {ago(h.check.at)}:</div>
+                    <div className="sub">{t('Last re-check {when}:', { when: ago(h.check.at) })}</div>
                     {h.check.steps.map((st) => (
                       <div className="step" key={st.name}>
                         <span className={'dot small ' + st.status} />
-                        <span className="stepname">{st.name}</span>
+                        <span className="stepname">{t(st.name)}</span>
                         <span className="stepdetail">{st.detail}</span>
-                        <span className="sub">{(st.ms / 1000).toFixed(1)} s</span>
+                        <span className="sub">{t('{n} s', { n: (st.ms / 1000).toFixed(1) })}</span>
                       </div>
                     ))}
                   </>
                 ) : (
-                  <div className="sub">Not re-checked yet. Press Re-check.</div>
+                  <div className="sub">{t('Not re-checked yet. Press Re-check.')}</div>
                 )}
               </div>
             )}
@@ -250,27 +277,52 @@ function WatchSummary({ watch }: { watch: SiteWatchStatus | null }): React.JSX.E
   const n = (l: 'ok' | 'warn' | 'fail'): number => last.filter((x) => x === l).length
   return (
     <div className="watchsum">
-      <b>Daily check</b>
+      <b>{t('Daily check')}</b>
       {p ? (
         <span>
-          Checking {Math.min(p.done + 1, p.total)} of {p.total}: {p.current}
-          {p.doing && p.doing !== 'checking' ? ` (${p.doing})` : ''}…
+          {p.doing && p.doing !== 'checking'
+            ? t('Checking {n} of {total}: {site} ({doing})…', {
+                n: num(Math.min(p.done + 1, p.total)),
+                total: num(p.total),
+                site: p.current,
+                doing: t(p.doing)
+              })
+            : t('Checking {n} of {total}: {site}…', {
+                n: num(Math.min(p.done + 1, p.total)),
+                total: num(p.total),
+                site: p.current
+              })}
           <span className="watchbar">
             <span style={{ width: `${p.total ? Math.round((p.done / p.total) * 100) : 0}%` }} />
           </span>
         </span>
       ) : watch.finishedAt ? (
         <span>
-          {ago(watch.finishedAt)}: {n('ok')} working
-          {n('warn') > 0 && <> · <span className="warn">{n('warn')} {n('warn') === 1 ? 'needs' : 'need'} a look</span></>}
-          {n('fail') > 0 && <> · <span className="fail">{n('fail')} broken</span></>}
-          {!watch.on && ' · the daily check is off in Settings'}
+          {ago(watch.finishedAt)}: {t('{n} working', { n: num(n('ok')) })}
+          {n('warn') > 0 && (
+            <>
+              {' '}
+              ·{' '}
+              <span className="warn">
+                {t(n('warn') === 1 ? '{n} needs a look' : '{n} need a look', { n: num(n('warn')) })}
+              </span>
+            </>
+          )}
+          {n('fail') > 0 && (
+            <>
+              {' '}
+              · <span className="fail">{t('{n} broken', { n: num(n('fail')) })}</span>
+            </>
+          )}
+          {!watch.on && ` · ${t('the daily check is off in Settings')}`}
         </span>
       ) : (
         <span>
           {watch.on
-            ? 'Every site is tried once a day in the background (it waits while you read). The first run starts a few minutes after Yomi opens.'
-            : 'Off in Settings. "Check all now" still runs it once.'}
+            ? t(
+                'Every site is tried once a day in the background (it waits while you read). The first run starts a few minutes after Yomi opens.'
+              )
+            : t('Off in Settings. "Check all now" still runs it once.')}
         </span>
       )}
     </div>
@@ -282,9 +334,9 @@ function DayStrip({ days }: { days?: { d: string; o: 'ok' | 'warn' | 'fail' }[] 
   if (!days || days.length === 0) return null
   const word = { ok: 'worked', warn: 'half worked', fail: 'broken' }
   return (
-    <span className="daystrip" title="The daily check, last 14 days">
+    <span className="daystrip" title={t('The daily check, last 14 days')}>
       {days.map((x) => (
-        <i key={x.d} className={x.o} title={`${x.d}: ${word[x.o]}`} />
+        <i key={x.d} className={x.o} title={`${x.d}: ${t(word[x.o])}`} />
       ))}
     </span>
   )

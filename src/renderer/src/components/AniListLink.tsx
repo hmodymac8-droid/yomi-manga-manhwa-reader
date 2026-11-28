@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { AniListLink, AniListMediaInfo, AniListStatus } from '../../../preload/index.d'
+import { t } from '../i18n'
 
 interface Props {
   seriesUrl: string
@@ -75,16 +76,16 @@ export default function AniListLinkPanel({ seriesUrl, title }: Props): React.JSX
     <div className="resume anilistrow">
       <span className="anilistlabel">AniList</span>
       {!status.connected ? (
-        <span className="count">Connect AniList in Settings to track this series.</span>
+        <span className="count">{t('Connect AniList in Settings to track this series.')}</span>
       ) : link && !open ? (
         <>
           <span className="count">
-            Linked to {link.title}
+            {t('Linked to {title}', { title: link.title })}
             {link.siteUrl && (
               <>
                 {' '}
                 <a href={link.siteUrl} target="_blank" rel="noreferrer">
-                  open
+                  {t('open')}
                 </a>
               </>
             )}
@@ -100,10 +101,10 @@ export default function AniListLinkPanel({ seriesUrl, title }: Props): React.JSX
               setError('')
             }}
           >
-            Change
+            {t('Change')}
           </button>
           <button className="mini" disabled={busy} onClick={() => void unlink()}>
-            Unlink
+            {t('Unlink')}
           </button>
         </>
       ) : !open ? (
@@ -116,7 +117,7 @@ export default function AniListLinkPanel({ seriesUrl, title }: Props): React.JSX
             void search()
           }}
         >
-          Link to AniList
+          {t('Link to AniList')}
         </button>
       ) : null}
 
@@ -133,11 +134,11 @@ export default function AniListLinkPanel({ seriesUrl, title }: Props): React.JSX
               className="setfield"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search AniList"
-              aria-label="Search AniList"
+              placeholder={t('Search AniList')}
+              aria-label={t('Search AniList')}
             />
             <button className="mini" type="submit" disabled={busy}>
-              {busy ? 'Searching…' : 'Search'}
+              {busy ? t('Searching…') : t('Search')}
             </button>
             <button
               className="mini"
@@ -147,14 +148,14 @@ export default function AniListLinkPanel({ seriesUrl, title }: Props): React.JSX
                 setError('')
               }}
             >
-              Cancel
+              {t('Cancel')}
             </button>
           </form>
           {suggested && (
             <div className="anilistSuggest">
-              Suggested: {suggested.title}
+              {t('Suggested: {title}', { title: suggested.title })}
               <button className="mini" disabled={busy} onClick={() => void confirm(suggested)}>
-                Use this
+                {t('Use this')}
               </button>
             </div>
           )}

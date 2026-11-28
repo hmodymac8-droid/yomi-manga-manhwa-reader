@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { DownloadItem } from '../../../preload/index.d'
 import { OpenChapter, OpenSeries, chapterNumber, coverSrc, localPage } from '../lib'
+import { num, t } from '../i18n'
 
-const mb = (b: number): string => (b / 1024 / 1024).toFixed(1) + ' MB'
+const mb = (b: number): string => t('{n} MB', { n: (b / 1024 / 1024).toFixed(1) })
+/** "1 chapter" / "12 chapters". */
+const chapterCount = (n: number): string => (n === 1 ? t('1 chapter') : t('{n} chapters', { n: num(n) }))
 
 interface Box {
   x1: number
@@ -82,9 +85,9 @@ export default function Downloads({ onRead, onOpen }: Props): React.JSX.Element 
   const pickedTab = useRef(false)
   // the saved series opened in the Offline library (null: every saved title, as covers)
   const [openUrl, setOpenUrl] = useState<string | null>(null)
-  const setTab = (t: 'queue' | 'library'): void => {
+  const setTab = (next: 'queue' | 'library'): void => {
     pickedTab.current = true
-    setTabState(t)
+    setTabState(next)
     setOpenUrl(null)
     setSelected(new Set())
   }
@@ -161,9 +164,16 @@ export default function Downloads({ onRead, onOpen }: Props): React.JSX.Element 
   const deleteIds = async (ids: string[], what: string): Promise<void> => {
     if (ids.length === 0) return
     const size = ids.reduce((s, id) => s + (items[id]?.status === 'done' ? items[id].bytes : 0), 0)
-    const ok = window.confirm(
-      `Delete ${what}?\n\n${ids.length} chapter${ids.length === 1 ? '' : 's'}${size > 0 ? ` · ${mb(size)}` : ''} will be removed from this computer. This cannot be undone.`
-    )
+    const n = num(ids.length)
+    const body =
+      size > 0
+        ? ids.length === 1
+          ? t('1 chapter · {size} will be removed from this computer. This cannot be undone.', { size: mb(size) })
+          : t('{n} chapters · {size} will be removed from this computer. This cannot be undone.', { n, size: mb(size) })
+        : ids.length === 1
+          ? t('1 chapter will be removed from this computer. This cannot be undone.')
+          : t('{n} chapters will be removed from this computer. This cannot be undone.', { n })
+    const ok = window.confirm(`${t('Delete {what}?', { what })}\n\n${body}`)
     if (!ok) return
     setDeleting(true)
     try {
@@ -285,7 +295,7 @@ export default function Downloads({ onRead, onOpen }: Props): React.JSX.Element 
         e.preventDefault()
         setSelected(new Set(visible.map((i) => i.id)))
       } else if (e.key === 'Delete' && selected.size > 0) {
-        void deleteIds([...selected], 'the selected downloads')
+        void deleteIds([...selected], t('the selected downloads'))
       } else if (e.key === 'Escape' && selected.size > 0) {
         setSelected(new Set())
       }
@@ -300,12 +310,22 @@ export default function Downloads({ onRead, onOpen }: Props): React.JSX.Element 
   const exportCbz = async (ids: string[]): Promise<void> => {
     const done = ids.filter((id) => items[id]?.status === 'done')
     if (done.length === 0) {
-      setNote('Pick finished chapters to export.')
+      setNote(t('Pick finished chapters to export.'))
       return
     }
-    setNote('Exporting…')
+    setNote(t('Exporting…'))
     const r = await window.api.downloadExportCbz(done)
-    setNote(r ? `Saved ${r.written} .cbz file${r.written === 1 ? '' : 's'}${r.skipped ? ` (${r.skipped} skipped)` : ''}.` : '')
+    if (!r) return setNote('')
+    const vars = { n: num(r.written), m: num(r.skipped) }
+    setNote(
+      r.skipped
+        ? r.written === 1
+          ? t('Saved 1 .cbz file ({m} skipped).', vars)
+          : t('Saved {n} .cbz files ({m} skipped).', vars)
+        : r.written === 1
+          ? t('Saved 1 .cbz file.')
+          : t('Saved {n} .cbz files.', vars)
+    )
   }
 
   return (
@@ -313,23 +333,24 @@ export default function Downloads({ onRead, onOpen }: Props): React.JSX.Element 
       <div className="pagehead">
         <div>
           <div className="kicker">ダウンロード</div>
-          <h1>Downloads</h1>
+          <h1>{t('Downloads')}</h1>
           <p>
-            {active} in queue · {saved.length} chapters offline · {mb(total)} used
+            {t('{a} in queue · {b} chapters offline · {size} used', { a: num(active), b: num(saved.length), size: mb(total) })}
           </p>
         </div>
       </div>
       <div className="shelftabs">
         <button className={tab === 'queue' ? 'on' : ''} onClick={() => setTab('queue')}>
-          Queue <span>{all.length - saved.length}</span>
+          {t('Queue')} <span>{num(all.length - saved.length)}</span>
         </button>
         <button className={tab === 'library' ? 'on' : ''} onClick={() => setTab('library')}>
-          Offline library <span>{saved.length}</span>
+          {t('Offline library')} <span>{num(saved.length)}</span>
         </button>
       </div>
       <div className="meta">
-        {saved.length} saved · {mb(total)} on disk
-        {active > 0 && ` · ${active} in progress`}
+        {active > 0
+          ? t('{n} saved · {size} on disk · {m} in progress', { n: num(saved.length), size: mb(total), m: num(active) })
+          : t('{n} saved · {size} on disk', { n: num(saved.length), size: mb(total) })}
         {failed.length > 0 && (
           <button
             className="mini"
@@ -347,7 +368,7 @@ export default function Downloads({ onRead, onOpen }: Props): React.JSX.Element 
               )
             }
           >
-            Retry failed
+            {t('Retry failed')}
           </button>
         )}
       </div>
@@ -355,23 +376,23 @@ export default function Downloads({ onRead, onOpen }: Props): React.JSX.Element 
       <div className="meta">
         <button
           className="mini big"
-          title={paused ? 'Start downloading the queue again' : 'Stop the queue. Chapters being downloaded go back to the queue and restart when you resume.'}
+          title={paused ? t('Start downloading the queue again') : t('Stop the queue. Chapters being downloaded go back to the queue and restart when you resume.')}
           onClick={async () => setPausedState(await window.api.downloadSetPaused(!paused))}
         >
-          {paused ? '▶ Resume downloads' : '⏸ Pause downloads'}
+          {paused ? t('▶ Resume downloads') : t('⏸ Pause downloads')}
         </button>{' '}
         <button
           className={`mini big${offline ? ' on' : ''}`}
-          title="Offline mode: the app only uses chapters saved on this computer and doesn't visit any site."
+          title={t("Offline mode: the app only uses chapters saved on this computer and doesn't visit any site.")}
           onClick={async () => setOfflineState(await window.api.offlineSet(!offline))}
         >
-          {offline ? '✈ Offline mode: ON' : '✈ Offline mode: off'}
+          {offline ? t('✈ Offline mode: ON') : t('✈ Offline mode: off')}
         </button>
-        {paused && <span className="sub"> Paused: {active} waiting</span>}
+        {paused && <span className="sub"> {t('Paused: {n} waiting', { n: num(active) })}</span>}
       </div>
       <div className="meta">
-        <label title="How many chapters download at the same time. More is faster; some sites slow down or refuse if you ask too much.">
-          Download at the same time:{' '}
+        <label title={t('How many chapters download at the same time. More is faster; some sites slow down or refuse if you ask too much.')}>
+          {t('Download at the same time:')}{' '}
           <select
             value={concurrency}
             onChange={(e) => {
@@ -382,7 +403,7 @@ export default function Downloads({ onRead, onOpen }: Props): React.JSX.Element 
           >
             {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
               <option key={n} value={n}>
-                {n} {n === 1 ? 'chapter' : 'chapters'}
+                {chapterCount(n)}
               </option>
             ))}
           </select>
@@ -391,7 +412,7 @@ export default function Downloads({ onRead, onOpen }: Props): React.JSX.Element 
       {tab === 'library' && openTitleInfo && (
         <div className="dltitlehead">
           <button className="mini big" onClick={() => openTitle(null)}>
-            ‹ All saved titles
+            {t('‹ All saved titles')}
           </button>
           <div className="dltitleinfo">
             {covers[openTitleInfo.url] ? (
@@ -411,14 +432,19 @@ export default function Downloads({ onRead, onOpen }: Props): React.JSX.Element 
             <div>
               <h2>{openTitleInfo.title}</h2>
               <p className="sub">
-                {openTitleInfo.list.length} {openTitleInfo.list.length === 1 ? 'chapter' : 'chapters'} saved · {mb(openTitleInfo.bytes)} · reads without the internet
+                {openTitleInfo.list.length === 1
+                  ? t('1 chapter saved · {size} · reads without the internet', { size: mb(openTitleInfo.bytes) })
+                  : t('{n} chapters saved · {size} · reads without the internet', {
+                      n: num(openTitleInfo.list.length),
+                      size: mb(openTitleInfo.bytes)
+                    })}
               </p>
               <div className="dltitleact">
                 <button className="primary" onClick={() => read(openTitleInfo.list[0], openTitleInfo.list)}>
-                  ▶ Read {openTitleInfo.list[0].chapterTitle}
+                  {t('▶ Read {chapter}', { chapter: openTitleInfo.list[0].chapterTitle })}
                 </button>
-                <button className="mini big" onClick={() => onOpen(seriesOf(openTitleInfo.list))} title="The full chapter list on the site">
-                  Open series page
+                <button className="mini big" onClick={() => onOpen(seriesOf(openTitleInfo.list))} title={t('The full chapter list on the site')}>
+                  {t('Open series page')}
                 </button>
               </div>
             </div>
@@ -428,40 +454,53 @@ export default function Downloads({ onRead, onOpen }: Props): React.JSX.Element 
       {visible.length > 0 && (
         <div className="seltools">
           <button className="mini big" onClick={() => setSelected(new Set(visible.map((i) => i.id)))}>
-            Select all
+            {t('Select all')}
           </button>
           {selected.size > 0 && (
             <>
-              <span className="sub">{selected.size} selected</span>
-              <button className="mini big danger" disabled={deleting} onClick={() => void deleteIds([...selected], 'the selected downloads')}>
-                Delete selected
+              <span className="sub">{t('{n} selected', { n: num(selected.size) })}</span>
+              <button className="mini big danger" disabled={deleting} onClick={() => void deleteIds([...selected], t('the selected downloads'))}>
+                {t('Delete selected')}
               </button>
               <button className="mini big" onClick={() => setSelected(new Set())}>
-                Clear selection
+                {t('Clear selection')}
               </button>
             </>
           )}
           {tab === 'library' && (
-            <button className="mini big" onClick={() => void exportCbz(selected.size > 0 ? [...selected] : visible.map((i) => i.id))} title="Save finished chapters as .cbz files (open them in any comic reader)">
-              Export CBZ{selected.size > 0 ? ' (selected)' : ' (all)'}
+            <button className="mini big" onClick={() => void exportCbz(selected.size > 0 ? [...selected] : visible.map((i) => i.id))} title={t('Save finished chapters as .cbz files (open them in any comic reader)')}>
+              {selected.size > 0 ? t('Export CBZ (selected)') : t('Export CBZ (all)')}
             </button>
           )}
           {note && <span className="sub">{note}</span>}
           <span className="grow" />
-          <button className="mini big danger" disabled={deleting} onClick={() => void deleteIds(visible.map((i) => i.id), tab === 'library' ? `every saved chapter of ${openTitleInfo?.title ?? 'this title'}` : 'everything in the queue')}>
-            {deleting ? 'Deleting…' : tab === 'library' ? 'Delete this title' : 'Delete all'}
+          <button
+            className="mini big danger"
+            disabled={deleting}
+            onClick={() =>
+              void deleteIds(
+                visible.map((i) => i.id),
+                tab === 'library'
+                  ? t('every saved chapter of {title}', { title: openTitleInfo?.title ?? t('this title') })
+                  : t('everything in the queue')
+              )
+            }
+          >
+            {deleting ? t('Deleting…') : tab === 'library' ? t('Delete this title') : t('Delete all')}
           </button>
         </div>
       )}
       {visible.length > 0 && (
-        <div className="sub seltip">Tip: press and drag across the list to select several, like in Windows. Ctrl keeps the earlier picks, Shift selects a range.</div>
+        <div className="sub seltip">
+          {t('Tip: press and drag across the list to select several, like in Windows. Ctrl keeps the earlier picks, Shift selects a range.')}
+        </div>
       )}
 
       {tab === 'queue' && visible.length === 0 && (
-        <div className="hint">Nothing waiting. Open a series and press Download on a chapter, or Download unread.</div>
+        <div className="hint">{t('Nothing waiting. Open a series and press Download on a chapter, or Download unread.')}</div>
       )}
       {tab === 'library' && titles.length === 0 && (
-        <div className="hint">No chapters saved yet. Finished downloads show up here and read without the internet.</div>
+        <div className="hint">{t('No chapters saved yet. Finished downloads show up here and read without the internet.')}</div>
       )}
 
       {tab === 'library' && !openTitleInfo && titles.length > 0 && (
@@ -470,7 +509,7 @@ export default function Downloads({ onRead, onOpen }: Props): React.JSX.Element 
             const c = covers[x.url]
             const first = x.list[0]
             return (
-              <button key={x.url} className="card" onClick={() => openTitle(x.url)} title={`Open ${x.title}: its saved chapters`}>
+              <button key={x.url} className="card" onClick={() => openTitle(x.url)} title={t('Open {title}: its saved chapters', { title: x.title })}>
                 <div className="cover" data-letter={x.title.trim().slice(0, 1).toUpperCase()}>
                   {c ? (
                     <img
@@ -490,7 +529,7 @@ export default function Downloads({ onRead, onOpen }: Props): React.JSX.Element 
                   ) : (
                     <div className="ph">{x.title.trim().slice(0, 1).toUpperCase()}</div>
                   )}
-                  <span className="badge">{x.list.length} saved</span>
+                  <span className="badge">{t('{n} saved', { n: num(x.list.length) })}</span>
                 </div>
                 <div className="name" title={x.title}>
                   {x.title}
@@ -507,7 +546,7 @@ export default function Downloads({ onRead, onOpen }: Props): React.JSX.Element 
       {[...bySeries.entries()].map(([title, list]) => (
         <section key={title} className="dlgroup">
           {tab === 'queue' && (
-            <h3 className="dlgrouphead" onClick={() => toggleGroup(list)} title="Click to select every chapter of this series">
+            <h3 className="dlgrouphead" onClick={() => toggleGroup(list)} title={t('Click to select every chapter of this series')}>
               {title}
             </h3>
           )}
@@ -533,15 +572,15 @@ export default function Downloads({ onRead, onOpen }: Props): React.JSX.Element 
                 />
               </span>
               <span className="dlstat">
-                {i.status === 'done' && `${i.files.length} pages · ${mb(i.bytes)}`}
-                {i.status === 'downloading' && <span className="pct">{i.total ? `${Math.round((i.done / i.total) * 100)}%` : 'Starting'}</span>}
-                {i.status === 'queued' && 'Waiting'}
+                {i.status === 'done' && t('{n} pages · {size}', { n: num(i.files.length), size: mb(i.bytes) })}
+                {i.status === 'downloading' && <span className="pct">{i.total ? `${Math.round((i.done / i.total) * 100)}%` : t('Starting')}</span>}
+                {i.status === 'queued' && t('Waiting')}
                 {i.status === 'error' && <span className="bad">{i.error}</span>}
                 {i.notice && i.status !== 'error' && <span className="sub">{i.notice}</span>}
               </span>
               {(i.status === 'queued' || i.status === 'downloading') && (
                 <button className="mini" onClick={() => window.api.downloadCancel(i.id)}>
-                  Cancel
+                  {t('Cancel')}
                 </button>
               )}
               {i.status !== 'downloading' && (
@@ -549,15 +588,15 @@ export default function Downloads({ onRead, onOpen }: Props): React.JSX.Element 
                   {i.status === 'done' && (
                     <>
                       <button className="mini on" onClick={() => read(i, list)}>
-                        Read
+                        {t('Read')}
                       </button>
                       <button className="mini" onClick={() => void exportCbz([i.id])}>
-                        Export CBZ
+                        {t('Export CBZ')}
                       </button>
                     </>
                   )}
                   <button className="mini" onClick={() => void deleteIds([i.id], i.chapterTitle)}>
-                    {i.status === 'done' ? 'Delete' : 'Remove'}
+                    {i.status === 'done' ? t('Delete') : t('Remove')}
                   </button>
                 </>
               )}

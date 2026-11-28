@@ -181,6 +181,8 @@ export interface AppSettings {
   myanimelist?: boolean
   /** Check every site once a day in the background. Missing means on. */
   siteWatch?: boolean
+  /** The app's language. Missing means English. */
+  language?: 'en' | 'ar'
 }
 
 
@@ -269,6 +271,9 @@ export interface SiteWatchSite {
   cause: SiteWatchCause
   /** What was found, in plain words. */
   text: string
+  /** The same with {step} / {detail} open, for showing it in your language: t(tpl, vars). */
+  tpl: string
+  vars?: Record<string, string>
   /** What Yomi fixed by itself on the last run. */
   fixed?: string
   /** Since when it has been broken. */

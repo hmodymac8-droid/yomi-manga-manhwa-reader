@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Icon } from './Icon'
+import { t } from '../i18n'
 
 /** Dark is the default; the choice is kept under "yomi-theme" (index.html applies it before the first paint). */
 export function ThemeToggle(): React.JSX.Element {
@@ -16,7 +17,7 @@ export function ThemeToggle(): React.JSX.Element {
     setLight(!light)
   }
   return (
-    <button className="iconbtn" onClick={flip} title={light ? 'Dark theme' : 'Light theme'} aria-label="Switch theme">
+    <button className="iconbtn" onClick={flip} title={light ? t('Dark theme') : t('Light theme')} aria-label={t('Switch theme')}>
       <Icon name={light ? 'moon' : 'sun'} />
     </button>
   )

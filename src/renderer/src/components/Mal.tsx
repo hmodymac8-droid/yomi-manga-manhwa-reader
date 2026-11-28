@@ -3,8 +3,13 @@ import type { MalInfo, MalTopKind, SearchHit } from '../../../preload/index.d'
 import type { OpenSeries } from '../lib'
 import { HitCard } from './Similar'
 import { useRowFit } from '../useRowFit'
+import { currentLang, num, t } from '../i18n'
 
-const compact = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 })
+// "632K" / "632 ألف" (Western digits in Arabic too, like num())
+const compact = new Intl.NumberFormat(currentLang() === 'ar' ? 'ar-EG-u-nu-latn' : 'en', {
+  notation: 'compact',
+  maximumFractionDigits: 1
+})
 
 /** "MyAnimeList ★ 8.54 · #150 · 632K readers" under a series' tags; opens the MyAnimeList page. */
 export function MalLine({ title }: { title: string }): React.JSX.Element | null {
@@ -25,8 +30,8 @@ export function MalLine({ title }: { title: string }): React.JSX.Element | null 
   if (!info) return null
   const bits = [
     info.score ? `★ ${info.score}` : '',
-    info.rank ? `Ranked #${info.rank.toLocaleString()}` : '',
-    info.members ? `${compact.format(info.members)} readers` : ''
+    info.rank ? t('Ranked #{n}', { n: num(info.rank) }) : '',
+    info.members ? t('{n} readers', { n: compact.format(info.members) }) : ''
   ].filter(Boolean)
   if (bits.length === 0) return null
   return (
@@ -37,10 +42,12 @@ export function MalLine({ title }: { title: string }): React.JSX.Element | null 
       rel="noreferrer"
       title={[
         info.score &&
-          `Score ${info.score}${info.scoredBy ? ` from ${info.scoredBy.toLocaleString()} people` : ''}`,
-        info.rank && `Ranked #${info.rank.toLocaleString()} on MyAnimeList`,
-        info.popularity && `#${info.popularity.toLocaleString()} most popular`,
-        'Click to open it on MyAnimeList'
+          (info.scoredBy
+            ? t('Score {score} from {n} people', { score: info.score, n: num(info.scoredBy) })
+            : t('Score {score}', { score: info.score })),
+        info.rank && t('Ranked #{n} on MyAnimeList', { n: num(info.rank) }),
+        info.popularity && t('#{n} most popular', { n: num(info.popularity) }),
+        t('Click to open it on MyAnimeList')
       ]
         .filter(Boolean)
         .join('\n')}
@@ -101,7 +108,7 @@ export function MalTopRow({
   return (
     <section className="continue similar maltop">
       <div className="meta">
-        Top on MyAnimeList
+        {t('Top on MyAnimeList')}
         <span className="maltabs" role="tablist">
           {KINDS.map((k) => (
             <button
@@ -114,13 +121,13 @@ export function MalTopRow({
                 setKind(k.kind)
               }}
             >
-              {k.label}
+              {t(k.label)}
             </button>
           ))}
         </span>
         {list.length > 0 && (all || list.length > cols) && (
           <button className="mini fitmore" onClick={() => setAll(!all)}>
-            {all ? 'Show fewer' : `Show all ${list.length}`}
+            {all ? t('Show fewer') : t('Show all {n}', { n: num(list.length) })}
           </button>
         )}
       </div>
@@ -136,7 +143,7 @@ export function MalTopRow({
           ))}
         </div>
       ) : (
-        <div className="hint2">None of these are on your sites yet.</div>
+        <div className="hint2">{t('None of these are on your sites yet.')}</div>
       )}
     </section>
   )
