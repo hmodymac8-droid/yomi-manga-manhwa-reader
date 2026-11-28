@@ -9,17 +9,15 @@ import {
 } from './grabber'
 import { fetchHtml } from './http'
 import { feedChapter, feedFor } from './feedapi'
-import { parseChapterImages } from './staticParse'
+import { plainChapter } from '../core/chapter'
 import { flavorCdnPages } from './sealed'
 import { askedPages } from './pageLists'
 import { getMode, setMode } from './hostmode'
 import {
   classifyFailure,
-  interpretChapter,
   outageError,
-  pageAddress,
   type FailureKind
-} from './repair'
+} from '../core/repair'
 
 const TTL = 20 * 60 * 1000
 const cache = new Map<string, { at: number; res: GrabResult }>()
@@ -68,27 +66,26 @@ export function setSourceSignal(fn: (s: SourceSignal) => void): void {
 }
 
 async function viaHttp(url: string): Promise<GrabResult | null> {
+  // the page itself is read by the shared code (core/chapter.ts), through the app's own session
+  const { chapter: c, fault } = await plainChapter((u, method = 'GET') => fetchHtml(u, 15000, method), url)
+  // A dead host, a 5xx or a browser check is remembered, then the browser ways still get a turn.
+  if (fault) {
+    rememberFault(url, fault.kind, fault.detail)
+    return null
+  }
+  if (!c) return null
   try {
-    const r = await fetchHtml(url)
-    const verdict = interpretChapter({ status: r.status, html: r.html, finalUrl: r.finalUrl }, url)
-    // A dead host, a 5xx or a browser check is remembered, then the browser ways still get a turn.
-    if (!verdict.up && verdict.kind !== 'none') {
-      rememberFault(url, verdict.kind, verdict.detail)
-      return null
-    }
-    if (r.status !== 200) return null
-    const p = parseChapterImages(r.html, url)
-    if (p.locked) lockedNotes.set(url, p.locked)
+    if (c.locked) lockedNotes.set(url, c.locked)
     // encrypted pictures (Stellar Saber): their addresses carry the chapter's key, see sealed.ts
     // ...or a page list the site hands out on request (ManhuaPlus), see pageLists.ts
-    const asked = (await flavorCdnPages(r.html, url)) ?? (await askedPages(r.html, url))
-    const pages = asked ?? p.pages
+    const asked = (await flavorCdnPages(c.html, url)) ?? (await askedPages(c.html, url))
+    const pages = asked ?? c.pages
     return {
       url,
-      title: p.title,
+      title: c.title,
       pages,
-      landed: pageAddress(r.html, r.finalUrl, p.title),
-      ...(asked || p.exact ? { fromSite: true } : {})
+      landed: c.landed,
+      ...(asked || c.exact ? { fromSite: true } : {})
     }
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)

@@ -11,7 +11,7 @@ import {
   writeSourceStatus,
   type ProbeTarget,
   type ProbeVerdict
-} from './repair'
+} from '../core/repair'
 import { rewriteFollowHost } from './updates'
 
 /**

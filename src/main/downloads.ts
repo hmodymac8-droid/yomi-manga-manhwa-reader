@@ -11,7 +11,7 @@ import { grabChapterFast } from './fastgrab'
 import { ensureSession, refererHints } from './grabber'
 import { unseal } from './sealed'
 import { getSource } from './catalog'
-import { classifyFailure, isOut, mapHost, urlsToTry } from './repair'
+import { classifyFailure, isOut, mapHost, urlsToTry } from '../core/repair'
 import { commitFailure, pagesFromFallback } from './fallback'
 
 export const downloadsRoot = (): string => join(app.getPath('userData'), 'downloads')

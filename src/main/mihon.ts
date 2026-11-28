@@ -4,7 +4,7 @@ import { getSeriesCached, openSeries, search } from './catalog'
 import { numberOf } from './gapfillLogic'
 import { parseBackup, readNumbers, shelfFor, type MihonManga } from './mihonLogic'
 import { applyForwardProgress, getProgress } from './progress'
-import { normalizeTitle } from './repair'
+import { normalizeTitle } from '../core/repair'
 import { getFollow, setCategory, setFollow } from './updates'
 
 /*

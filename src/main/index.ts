@@ -81,7 +81,7 @@ import {
   sourcesWithSeriesAsList
 } from './catalog'
 import { allHealth, dropHealth, flushHealth, healthOf, recordCheck, recordOpen, recordOpenSpeed } from './health'
-import { classifyFailure, isBlockedSource } from './repair'
+import { classifyFailure, isBlockedSource } from '../core/repair'
 import {
   commitFailure,
   onSourceSignal,
@@ -1154,7 +1154,7 @@ app.whenReady().then(async () => {
     ;(async () => {
       const [site, seriesUrl] = process.env['MR_CHTEST']!.split(',')
       const { grabChapter, grabChapterLight } = await import('./grabber')
-      const { parseChapterImages } = await import('./staticParse')
+      const { parseChapterImages } = await import('../core/staticParse')
       warmUp()
       const def = await detectSource(site)
       def.id = 'ch-test'
@@ -2893,7 +2893,7 @@ app.whenReady().then(async () => {
   if (process.env['MR_STATIC']) {
     ;(async () => {
       const { fetchHtml } = await import('./http')
-      const { parseChapterImages } = await import('./staticParse')
+      const { parseChapterImages } = await import('../core/staticParse')
       const r = await fetchHtml(process.env['MR_STATIC']!)
       const p = parseChapterImages(r.html, process.env['MR_STATIC']!)
       console.log(

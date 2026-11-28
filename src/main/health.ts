@@ -2,7 +2,7 @@ import { app } from 'electron'
 import { join } from 'path'
 import type { SiteHealth, HealthCheck } from '../preload/index.d'
 import { isUnreadable, readJson, writeAtomic } from './safefile'
-import { emptyOutage, type HealthEvent, type OutageState } from './repair'
+import { emptyOutage, type HealthEvent, type OutageState } from '../core/repair'
 
 /**
  * What we know about how each site is doing: the outcome of your last 20 series opens, the result of the

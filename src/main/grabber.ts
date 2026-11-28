@@ -1,6 +1,6 @@
 import { app, BrowserWindow, clipboard, session } from 'electron'
 import { mt } from './lang'
-import { pickPageGroup } from './staticParse'
+import { pickPageGroup } from '../core/staticParse'
 import { COMMAND_RE, FAKE_CHECK_RE } from './fakeCheck'
 
 const PARTITION = 'persist:sources'

@@ -1,7 +1,7 @@
 import { app } from 'electron'
 import { join } from 'path'
 import { getSeriesCached, getSource } from './catalog'
-import { normalizeTitle } from './repair'
+import { normalizeTitle } from '../core/repair'
 import { readJson, writeAtomic } from './safefile'
 import { getSettings } from './settings'
 import { aniListText, cleanStory, pickStory, type StoryCandidate } from './storyLogic'

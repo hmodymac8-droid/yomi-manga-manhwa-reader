@@ -4,7 +4,7 @@
  */
 
 import type { HealthStep, SiteWatchCause } from '../preload/index.d'
-import { classifyFailure } from './repair'
+import { classifyFailure } from '../core/repair'
 
 export type { SiteWatchCause }
 

@@ -30,7 +30,7 @@ import {
   type OutageState,
   type ProbeTarget,
   type RelocatableSource
-} from '../src/main/repair.ts'
+} from '../src/core/repair.ts'
 
 const now = 1_700_000_000_000
 

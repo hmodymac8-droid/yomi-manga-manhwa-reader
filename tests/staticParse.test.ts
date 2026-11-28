@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { parseChapterImages, parseSeries, textNumber } from '../src/main/staticParse.ts'
+import { parseChapterImages, parseSeries, textNumber } from '../src/core/staticParse.ts'
 
 const page = 'https://www.fastestmanga.com/ar/manga/a-fortune-telling-princess/'
 const re = '/manga/[^/]+/(?:fsl|chapter)-[^/]+/?$'

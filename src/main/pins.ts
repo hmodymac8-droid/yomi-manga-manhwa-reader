@@ -1,7 +1,7 @@
 import { app } from 'electron'
 import { join } from 'path'
 import { readJson, writeAtomic } from './safefile'
-import { normalizeTitle } from './repair'
+import { normalizeTitle } from '../core/repair'
 
 /**
  * The site you picked with "Read from" for a title. Fallback uses it first, and a repair never

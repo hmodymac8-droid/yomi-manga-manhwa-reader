@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { dropOtherSeries } from '../src/main/chapterText.ts'
+import { dropOtherSeries } from '../src/core/chapterText.ts'
 
 const S = 'https://www.manganato.gg/manga/hitozuma-colored'
 const ch = (url: string): { url: string } => ({ url })

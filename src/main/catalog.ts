@@ -1,5 +1,7 @@
 import { app, BrowserWindow, powerMonitor } from 'electron'
-import { dropOtherSeries, unglueNumber } from './chapterText'
+import { dropOtherSeries } from '../core/chapterText'
+import { chapterNum, finalizeChapters, looksIncomplete, sortChapters, titleFromUrl } from '../core/chapters'
+import { staticSeries as staticSeriesWith } from '../core/series'
 import { join } from 'path'
 import { existsSync, statSync } from 'fs'
 import type {
@@ -25,7 +27,7 @@ import {
   upgradeCover,
   type SeriesMeta,
   type SeriesType
-} from './staticParse'
+} from '../core/staticParse'
 import { readSitemapFile } from './sitemap'
 import {
   backupIfEmpty,
@@ -40,7 +42,7 @@ import {
 import { robotsAllows } from './robots'
 import { getMode, setMode, type Mode } from './hostmode'
 import { matchBuiltin } from './sources'
-import { applyRelocation, normalizeTitle, orderSourceIds, rewriteDetailUrls } from './repair'
+import { applyRelocation, normalizeTitle, orderSourceIds, rewriteDetailUrls } from '../core/repair'
 import { pinMap } from './pins'
 import { getSettings, settingsVersion } from './settings'
 import { crawledMeta, genreIndexVersion, setFeedTags, urlKey } from './genres'
@@ -966,13 +968,6 @@ const extractScript = (seriesRe: string): string => `(() => {
   return [...map.values()].map(({ url, title, cover }) => ({ url, title, cover }));
 })()`
 
-function titleFromUrl(url: string): string {
-  const last = decodeURIComponent(new URL(url).pathname.split('/').filter(Boolean).pop() ?? url)
-  return last
-    .replace(/-[0-9a-f]{24}$/, '')
-    .replace(/[-_]+/g, ' ')
-    .trim()
-}
 
 async function extractWithPolling(
   win: BrowserWindow,
@@ -1892,7 +1887,6 @@ function filtered(groups: Grp[], kind: SeriesType | undefined, genre: string | u
 // Series pages (chapter lists)
 // ---------------------------------------------------------------------------------------------
 
-type Ch = SeriesDetail['chapters'][number]
 
 const seriesScript = (chapterRe: string, slug: string): string => `(() => {
   const re = new RegExp(${JSON.stringify(chapterRe)}, 'i');
@@ -2086,84 +2080,6 @@ const INNER_SCROLL = `(() => {
   window.scrollTo(0, doc.scrollHeight);
   return moved || !pageAtBottom;
 })()`
-
-const NUM = '(\\d+(?:\\.\\d+)?)'
-
-/** Chapter number from the visible title (used to merge the same chapter listed by several providers). */
-function numFromTitle(t: string, url = ''): string | null {
-  const m =
-    t.match(new RegExp(`\\bC\\.\\s*${NUM}`, 'i')) ||
-    t.match(new RegExp(`\\b(?:chapter|chap|ch|ep|episode)\\.?\\s*${NUM}`, 'i'))
-  if (!m) return null
-  // "Chapter 5916 months ago" on a …/chapter-59/ link is chapter 59 with its age glued on
-  const u = url.match(new RegExp(`(?:chapter|chap|ch|ep|episode)[-_/ ]?${NUM}/?$`, 'i'))
-  return unglueNumber(m[1], t.slice((m.index ?? 0) + m[0].length), u ? u[1] : null)
-}
-
-/** Chapter number from the title, falling back to the URL. */
-function chapterNum(c: Ch): number | null {
-  const t = numFromTitle(c.title, c.url)
-  if (t !== null) return Number(t)
-  const m =
-    c.url.match(new RegExp(`(?:chapter|chap|ch|ep|episode)[-_/ ]?${NUM}`, 'i')) ||
-    c.url.match(new RegExp(`_${NUM}/?$`))
-  return m ? Number(m[1]) : null
-}
-
-/**
- * Some sites list the same chapter once per provider (e.g. three "Chapter 12" links from different
- * scan hosts). Merge them into one chapter and keep the other links as fallbacks.
- */
-function mergeProviders(list: { title: string; url: string }[]): Ch[] {
-  const out: Ch[] = []
-  const byNum = new Map<string, Ch>()
-  for (const c of list) {
-    const num = numFromTitle(c.title, c.url)
-    // One consistent name: "Chapter 34", whatever the site prints ("Ch. 34 108p Today", "34", "Ch.170 Thunderscans 4h ago").
-    const shown = num ?? (chapterNum(c) !== null ? String(chapterNum(c)) : null)
-    const title = shown !== null ? `Chapter ${shown}` : c.title || 'Chapter'
-    // (a number from the address counts too: Asura Toons also lists …/manga/<series>/chapter/53, named just "53")
-    const key = num ?? shown
-    if (key) {
-      const have = byNum.get(key)
-      if (have) {
-        have.alts = [...(have.alts ?? []), c.url]
-        continue
-      }
-      const entry: Ch = { title, url: c.url, alts: [] }
-      byNum.set(key, entry)
-      out.push(entry)
-    } else {
-      out.push({ title, url: c.url })
-    }
-  }
-  return out.map((c) => (c.alts && c.alts.length === 0 ? { title: c.title, url: c.url } : c))
-}
-
-/** Newest chapter first, whatever order the site printed them in. Chapters without a number go last. */
-function sortChapters(list: Ch[]): Ch[] {
-  const withNum = list.map((c, i) => ({ c, i, n: chapterNum(c) }))
-  if (withNum.filter((x) => x.n !== null).length < list.length * 0.6) return list
-  withNum.sort((a, b) => {
-    if (a.n === null && b.n === null) return a.i - b.i
-    if (a.n === null) return 1
-    if (b.n === null) return -1
-    return b.n - a.n || a.i - b.i
-  })
-  return withNum.map((x) => x.c)
-}
-
-/** Drop other series' chapters, merge providers, sort. */
-function finalizeChapters(
-  list: { title: string; url: string }[],
-  slug: string,
-  seriesUrl: string
-): Ch[] {
-  const flat = (s: string): string => s.toLowerCase().replace(/[^a-z0-9]+/g, '')
-  const own = slug ? list.filter((c) => flat(c.url).includes(slug)) : []
-  // nothing names this series: keep the links, except other series' chapters from a sidebar
-  return sortChapters(mergeProviders(own.length > 0 ? own : dropOtherSeries(list, seriesUrl)))
-}
 
 /**
  * Chapter lists split into slices that have their own plain address ("…/?tab=chapters&chapter_page=2"). Finds which
@@ -2553,129 +2469,9 @@ async function browserSeries(
   }
 }
 
-/**
- * A list with 2 chapters whose newest is "Chapter 66" is missing most of them (series are normally numbered
- * 1, 2, 3 ...). This catches lists that were read before the page had finished loading, or only the first slice.
- */
-export function looksIncomplete(chapters: { title: string; url: string }[]): boolean {
-  const nums = chapters.map((c) => chapterNum(c)).filter((n): n is number => n !== null && n < 5000)
-  if (nums.length === 0) return false
-  const max = Math.max(...nums)
-  if (max >= 10 && chapters.length < max * 0.6) return true
-  // Holes in the numbering (21..60 and then 0): the middle slice was never read. A few missing numbers are normal
-  // (skipped or merged chapters); a big share of the range missing is not.
-  const min = Math.min(...nums)
-  if (max - min >= 10) {
-    const have = new Set(nums.filter((n) => Number.isInteger(n)))
-    let missing = 0
-    for (let n = Math.ceil(min); n <= max; n++) if (!have.has(n)) missing++
-    if (missing > Math.max(3, (max - min + 1) * 0.2)) return true
-  }
-  return false
-}
-
-/**
- * Madara sites (a common manga site engine) often load a series' chapter list with a request after the page opens,
- * 50 chapters at a time ("…/ajax/chapters/", then "?t=2", "?t=3"…). Asking for those pieces directly gives the whole
- * list in a second or two, where a browser window would have to click through each page. Null when the page is not
- * like that.
- */
-async function madaraChapters(
-  html: string,
-  url: string,
-  chapterRe: string
-): Promise<{ title: string; url: string }[] | null> {
-  if (!/wp-manga|madara/i.test(html) || !/manga_id|manga-chapters-holder/i.test(html)) return null
-  const base = url.replace(/[?#].*$/, '').replace(/\/?$/, '/') + 'ajax/chapters/'
-  const first = await fetchHtml(base, 15000, 'POST').catch(() => null)
-  if (!first || first.status !== 200) return null
-  const all = [...parseSeries(first.html, url, chapterRe).chapters]
-  if (all.length === 0) return null
-  // the list's own pager says how many pieces there are
-  const last = Math.min(
-    200,
-    Math.max(
-      1,
-      ...[...first.html.matchAll(/data-page="(\d+)"|[?&]t=(\d+)/g)].map((m) => Number(m[1] ?? m[2]))
-    )
-  )
-  const rest = Array.from({ length: last - 1 }, (_, i) => i + 2)
-  for (let i = 0; i < rest.length; i += 4) {
-    const got = await Promise.all(
-      rest.slice(i, i + 4).map((n) => fetchHtml(base + '?t=' + n, 15000, 'POST').catch(() => null))
-    )
-    for (const g of got)
-      if (g && g.status === 200) all.push(...parseSeries(g.html, url, chapterRe).chapters)
-  }
-  if (process.env['MR_PIPEDEBUG'])
-    console.log('MADARA', url, 'pieces', last, 'chapters', all.length)
-  return all
-}
-
-async function staticSeries(
-  src: SourceDef,
-  url: string,
-  slug: string
-): Promise<SeriesDetail | null> {
-  try {
-    const r = await fetchHtml(url)
-    if (r.status !== 200) return null
-    const madara = await madaraChapters(r.html, url, src.chapterRe)
-    if (madara) {
-      const chapters = finalizeChapters(madara, slug, url)
-      if (chapters.length > 0) {
-        const p0 = parseSeries(r.html, url, src.chapterRe)
-        return {
-          url,
-          title: p0.title,
-          cover: p0.cover,
-          description: p0.description,
-          ...parseMeta(r.html, url),
-          chapters
-        }
-      }
-    }
-    const p = parseSeries(r.html, url, src.chapterRe)
-    if (process.env['MR_PIPEDEBUG'])
-      console.log(
-        'STATIC',
-        url,
-        'status',
-        r.status,
-        'chapters',
-        p.chapters.length,
-        'paged',
-        p.paged
-      )
-    if (p.paged || p.chapters.length === 0) return null
-    // Pager links to the same page (…?page=2): this is only the first slice of the list.
-    if (
-      /href="[^"]*[?&](?:page|chapter_page|chapters_page|cpage)=2(?:&|")/i.test(
-        r.html.replace(/&amp;/g, '&')
-      )
-    )
-      return null
-    // The static HTML may only hold other series' chapter links (the real list is added by JavaScript).
-    const flat = (s: string): string => s.toLowerCase().replace(/[^a-z0-9]+/g, '')
-    if (slug && !p.chapters.some((c) => flat(c.url).includes(slug))) return null
-    const chapters = finalizeChapters(
-      [...p.chapters, ...dataChapters(r.html, url, p.chapters)],
-      slug,
-      url
-    )
-    // The page handed over only a slice (the rest is added by JavaScript after load): not a usable answer.
-    if (looksIncomplete(chapters)) return null
-    return {
-      url,
-      title: p.title,
-      cover: p.cover,
-      description: p.description,
-      ...parseMeta(r.html, url),
-      chapters
-    }
-  } catch {
-    return null
-  }
+/** A series read with plain requests (see core/series.ts), through the app's own session. */
+function staticSeries(src: SourceDef, url: string, slug: string): Promise<SeriesDetail | null> {
+  return staticSeriesWith((u, method = 'GET') => fetchHtml(u, 15000, method), src, url, slug)
 }
 
 // Chapter lists are cached on disk: the series page opens instantly and refreshes in the background.

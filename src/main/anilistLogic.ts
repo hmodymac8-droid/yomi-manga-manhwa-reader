@@ -1,4 +1,4 @@
-import { chapterNumber, normalizeTitle } from './repair'
+import { chapterNumber, normalizeTitle } from '../core/repair'
 
 export const ANILIST_AUTHORIZE_URL = 'https://anilist.co/api/v2/oauth/authorize'
 export const ANILIST_GRAPHQL_URL = 'https://graphql.anilist.co'
