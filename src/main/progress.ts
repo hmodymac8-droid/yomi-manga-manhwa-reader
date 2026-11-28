@@ -2,7 +2,7 @@ import { app } from 'electron'
 import { join } from 'path'
 import type { ProgressPatch, ProgressRecord } from '../preload/index.d'
 import { isUnreadable, readJson, writeAtomic } from './safefile'
-import { mapHost } from './repair'
+import { mapHost } from '../core/repair'
 
 let data: Record<string, ProgressRecord> | null = null
 let timer: NodeJS.Timeout | undefined

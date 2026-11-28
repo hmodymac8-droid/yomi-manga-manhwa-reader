@@ -1,7 +1,7 @@
 import type { FeedApiDef, SeriesDetail, SourceDef } from '../preload/index.d'
 import type { GrabResult } from './grabber'
 import { fetchHtml, fetchJson } from './http'
-import { canonGenres, type SeriesType } from './staticParse'
+import { canonGenres, type SeriesType } from '../core/staticParse'
 
 /*
  * Sites that are JavaScript apps (Next.js and the like) draw their pages from a data feed, a JSON API, so their web

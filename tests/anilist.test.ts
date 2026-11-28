@@ -25,7 +25,7 @@ import {
   type ChapterRef,
   type QueuedUpdate
 } from '../src/main/anilistLogic.ts'
-import { chapterNumber } from '../src/main/repair.ts'
+import { chapterNumber } from '../src/core/repair.ts'
 import {
   AniListClient,
   MEDIA_PROGRESS_QUERY,

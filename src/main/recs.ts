@@ -4,7 +4,7 @@ import type { SearchHit } from '../preload/index.d'
 import { findTitle } from './catalog'
 import { getAniListLink } from './anilist'
 import { recentProgress } from './progress'
-import { normalizeTitle } from './repair'
+import { normalizeTitle } from '../core/repair'
 import { readJson, writeAtomic } from './safefile'
 import { getSettings } from './settings'
 

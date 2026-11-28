@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { unglueNumber } from '../src/main/chapterText.ts'
+import { unglueNumber } from '../src/core/chapterText.ts'
 
 test('an age glued onto the chapter number is taken off using the link', () => {
   assert.equal(unglueNumber('5916', ' months ago', '59'), '59')

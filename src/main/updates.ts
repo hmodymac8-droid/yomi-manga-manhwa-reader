@@ -14,9 +14,9 @@ import { getSeries, getSeriesCached, getSource, mergeNewest, openSeries } from '
 import { enqueueDownloads } from './downloads'
 import { getProgress, recentProgress } from './progress'
 import { isUnreadable, readJson, writeAtomic } from './safefile'
-import { mapHost } from './repair'
+import { mapHost } from '../core/repair'
 import { coverBytes } from './imageProxy'
-import { dropOtherSeries } from './chapterText'
+import { dropOtherSeries } from '../core/chapterText'
 
 const ICON_W = 192
 

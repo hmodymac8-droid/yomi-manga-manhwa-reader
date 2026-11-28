@@ -19,7 +19,7 @@ import {
   type Availability,
   type FailureKind,
   type FallbackPick
-} from './repair'
+} from '../core/repair'
 
 export interface SourceState {
   availability: Availability
