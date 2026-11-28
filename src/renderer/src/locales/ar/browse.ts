@@ -97,7 +97,7 @@ export const AR_BROWSE: Record<string, string> = {
     'تابع التمرير بعد نهاية الصفحة لفتح الصفحة التالية',
   'scroll down for next page': 'مرّر للأسفل للصفحة التالية',
   'Next page ›': 'الصفحة التالية ›',
-  'or keep scrolling down': 'أو تابع التمرير للأسفل',
+  'or keep scrolling down': 'أو واصل التمرير لأسفل',
 
   // Added by me
   'Added by me': 'أضفتُها',
@@ -175,7 +175,7 @@ export const AR_BROWSE: Record<string, string> = {
   'No new chapters yet. Yomi checks the series you follow every so often, or press Check now.':
     'لا فصول جديدة بعد. يفحص Yomi السلاسل التي تتابعها من حين لآخر، أو اضغط «افحص الآن».',
   "Couldn't open {title} right now. Open it from its page instead.":
-    'تعذّر فتح {title} الآن. افتحه من صفحته بدلًا من ذلك.',
+    'تعذّر فتح {title} الآن. افتحها من صفحتها بدلًا من ذلك.',
   'Open the series': 'فتح السلسلة',
   read: 'مقروء',
   'Opening…': 'جارٍ الفتح…',

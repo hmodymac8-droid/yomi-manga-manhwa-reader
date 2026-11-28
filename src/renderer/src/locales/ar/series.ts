@@ -298,5 +298,13 @@ export const AR_SERIES: Record<string, string> = {
   Adaptation: 'مقتبس',
   Webtoon: 'ويبتون',
   Webtoons: 'ويبتونات',
-  Kids: 'أطفال'
+  Kids: 'أطفال',
+  // spellings some sites use
+  Life: 'حياة',
+  'Korean Manhwa': 'مانهوا كورية',
+  Animated: 'متحرك',
+  'Royal Family': 'عائلة ملكية',
+  Shounenai: 'شونين آي',
+  Historica: 'تاريخي',
+  Mannhwa: 'مانهوا'
 }

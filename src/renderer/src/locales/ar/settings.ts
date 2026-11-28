@@ -25,7 +25,7 @@ export const AR_SETTINGS: Record<string, string> = {
   // Recommendations
   Recommendations: 'الاقتراحات',
   "“Similar on your sites” on a series page and “Because you read” on Discover come from AniList's community recommendations. To get them, Yomi sends AniList the title of the series you open or read recently (no account, nothing else). Answers are kept for a week.":
-    '«مشابهة على مواقعك» في صفحة السلسلة و«لأنك قرأت» في الاستكشاف تأتي من اقتراحات مجتمع AniList. للحصول عليها، يرسل Yomi إلى AniList عنوان السلسلة التي تفتحها أو قرأتها مؤخرًا (دون حساب، ولا شيء غير ذلك). تُحفظ الإجابات لمدة أسبوع.',
+    '«مشابه في مواقعك» في صفحة السلسلة و«لأنك قرأت» في الاستكشاف تأتي من اقتراحات مجتمع AniList. للحصول عليها، يرسل Yomi إلى AniList عنوان السلسلة التي تفتحها أو قرأتها مؤخرًا (دون حساب، ولا شيء غير ذلك). تُحفظ الإجابات لمدة أسبوع.',
   'Show recommendations': 'إظهار الاقتراحات',
 
   // Daily site check

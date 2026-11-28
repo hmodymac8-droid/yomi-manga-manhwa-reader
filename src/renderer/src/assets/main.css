@@ -979,3 +979,6 @@ select { cursor: pointer; }
 /* Arabic letters are taller and need more room between lines; the Latin-only spacing tricks don't suit them */
 [dir='rtl'] body { line-height: 1.6; }
 [dir='rtl'] .eyebrow, [dir='rtl'] .sitedirlang, [dir='rtl'] .kicker { letter-spacing: 0; }
+/* Arabic: the window's own bar keeps Windows' order (title on the left, buttons on the right), web addresses read left to right */
+[dir='rtl'] .titlebar { direction: ltr; }
+[dir='rtl'] input[dir='ltr'] { text-align: left; }

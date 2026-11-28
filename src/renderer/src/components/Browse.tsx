@@ -663,6 +663,7 @@ export default function Browse({
             <span className="add">
               <input
                 placeholder="https://"
+                dir="ltr"
                 value={siteUrl}
                 onChange={(e) => setSiteUrl(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && addSite()}

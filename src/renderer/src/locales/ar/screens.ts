@@ -22,7 +22,7 @@ export const AR_SCREENS: Record<string, string> = {
 
   // a site's row
   '{n} titles': '{n} عنوان',
-  'scanning…': 'جارٍ فحص العناوين…',
+  'scanning…': 'جارٍ الفحص…',
   'reading genres…': 'جارٍ قراءة التصنيفات…',
   'genres: {genres} · {titles} titles tagged · {when}':
     'التصنيفات: {genres} · {titles} عنوان مصنّف · {when}',

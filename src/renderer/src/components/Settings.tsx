@@ -42,7 +42,7 @@ export default function Settings(): React.JSX.Element {
         <div className="settext">
           <h2>Language · اللغة</h2>
           <p>
-            Yomi in English or Arabic. Arabic shows every screen right to left.
+            <span dir="ltr">Yomi in English or Arabic. Arabic shows every screen right to left.</span>
             <br />
             <span dir="rtl">يومي بالعربية أو الإنجليزية. العربية تعرض كل الشاشات من اليمين لليسار.</span>
           </p>
